@@ -1,3 +1,5 @@
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "wxt";
 
 export default defineConfig({
@@ -6,5 +8,30 @@ export default defineConfig({
   manifest: {
     name: "ScreenBase",
     permissions: ["activeTab", "storage"],
+    host_permissions: [
+      // API サーバーへのリクエストに Cookie を自動付与するために必要
+      // 開発: https://3000.mydevbox.pp.ua, 本番: https://api.screenbase.dpdns.org
+      `${process.env.VITE_API_URL ?? "https://3000.mydevbox.pp.ua"}/*`,
+    ],
   },
+  vite: () => ({
+    plugins: [tailwindcss()],
+    resolve: {
+      alias: [
+        // globals.css は src/styles/ 配下にあるため先に個別指定する
+        {
+          find: "@screenbase/ui/globals.css",
+          replacement: path.resolve(
+            __dirname,
+            "../../packages/ui/src/styles/globals.css",
+          ),
+        },
+        // その他の @screenbase/ui/* は src/ 配下にマッピング
+        {
+          find: "@screenbase/ui",
+          replacement: path.resolve(__dirname, "../../packages/ui/src"),
+        },
+      ],
+    },
+  }),
 });

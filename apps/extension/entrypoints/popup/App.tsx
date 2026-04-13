@@ -1,6 +1,28 @@
+import { Button } from "@screenbase/ui/components/ui/button";
 import { useEffect, useState } from "react";
+import { authClient } from "../../lib/auth-client";
 
-export default function App() {
+const WEB_URL = import.meta.env.VITE_WEB_URL ?? "https://3001.mydevbox.pp.ua";
+
+function LoginView() {
+  const handleLogin = () => {
+    browser.tabs.create({ url: `${WEB_URL}/sign-in` });
+  };
+
+  return (
+    <div className="w-80 bg-background p-4 text-foreground">
+      <h1 className="mb-3 font-bold text-base">ScreenBase</h1>
+      <p className="mb-4 text-muted-foreground text-sm">
+        ログインして利用を開始してください。
+      </p>
+      <Button className="w-full" onClick={handleLogin}>
+        ログイン
+      </Button>
+    </div>
+  );
+}
+
+function MainView({ user }: { user: { name: string; email: string } }) {
   const [tabInfo, setTabInfo] = useState<{
     title?: string;
     url?: string;
@@ -17,50 +39,59 @@ export default function App() {
 
   const handleSaveTab = async () => {
     if (!tabInfo) return;
-    // TODO: implement tab save logic with auth + API
+    // TODO: implement tab save logic with API
     console.log("Saving tab:", tabInfo);
   };
 
+  const handleLogout = async () => {
+    await authClient.signOut();
+  };
+
   return (
-    <div style={{ width: 320, padding: 16, fontFamily: "sans-serif" }}>
-      <h1 style={{ fontSize: 16, fontWeight: "bold", marginBottom: 12 }}>
-        ScreenBase
-      </h1>
+    <div className="w-80 bg-background p-4 text-foreground">
+      <div className="mb-3 flex items-center justify-between">
+        <h1 className="font-bold text-base">ScreenBase</h1>
+        <Button variant="ghost" size="xs" onClick={handleLogout}>
+          ログアウト
+        </Button>
+      </div>
+
+      <div className="mb-4 rounded-md border p-3">
+        <p className="font-medium text-sm">{user.name}</p>
+        <p className="text-muted-foreground text-xs">{user.email}</p>
+      </div>
+
       {tabInfo ? (
         <>
-          <p style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
-            {tabInfo.title}
-          </p>
-          <p
-            style={{
-              fontSize: 11,
-              color: "#666",
-              marginBottom: 16,
-              wordBreak: "break-all",
-            }}
-          >
+          <p className="mb-1 truncate font-medium text-sm">{tabInfo.title}</p>
+          <p className="mb-4 break-all text-muted-foreground text-xs">
             {tabInfo.url}
           </p>
-          <button
-            type="button"
-            onClick={handleSaveTab}
-            style={{
-              width: "100%",
-              padding: "8px 16px",
-              backgroundColor: "#000",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontSize: 14,
-            }}
-          >
+          <Button className="w-full" onClick={handleSaveTab}>
             このタブを保存
-          </button>
+          </Button>
         </>
       ) : (
-        <p style={{ color: "#666", fontSize: 13 }}>タブ情報を取得中...</p>
+        <p className="text-muted-foreground text-sm">タブ情報を取得中...</p>
       )}
     </div>
   );
+}
+
+export default function App() {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) {
+    return (
+      <div className="w-80 bg-background p-4 text-foreground">
+        <p className="text-muted-foreground text-sm">読み込み中...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginView />;
+  }
+
+  return <MainView user={session.user} />;
 }

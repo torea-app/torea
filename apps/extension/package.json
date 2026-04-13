@@ -1,0 +1,25 @@
+{
+  "name": "@screenbase/extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ScreenBase Chrome Extension",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt --port 5555",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@wxt-dev/module-react": "^1.1.5",
+    "typescript": "^5",
+    "wxt": "^0.20.21"
+  }
+}

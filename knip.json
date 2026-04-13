@@ -1,0 +1,58 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "exclude": ["exports"],
+  "workspaces": {
+    ".": {
+      "ignoreDependencies": ["@screenbase/env", "dotenv", "zod"],
+      "ignore": ["scripts/**"]
+    },
+    "apps/web": {
+      "entry": ["src/app/**/*.{ts,tsx}", "src/lib/*.ts", "open-next.config.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": [
+        "@libsql/client",
+        "@screenbase/config",
+        "dotenv",
+        "libsql",
+        "postcss",
+        "alchemy",
+        "tailwindcss"
+      ]
+    },
+    "apps/server": {
+      "entry": ["src/infrastructure/**/*.ts", "src/middleware/**/*.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["better-auth", "dotenv", "alchemy", "wrangler"],
+      "ignoreBinaries": ["dot"]
+    },
+    "packages/auth": {
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["dotenv", "zod"]
+    },
+    "packages/db": {
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["libsql", "zod"]
+    },
+    "packages/env": {
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["dotenv", "cloudflare"]
+    },
+    "packages/shared": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ui": {
+      "entry": ["src/lib/*.ts", "src/components/ui/*.tsx", "src/hooks/*.ts"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "apps/liff": {
+      "entry": ["src/routes/**/*.tsx"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@screenbase/config", "tailwindcss", "hono"]
+    },
+    "packages/infra": {
+      "entry": ["alchemy.run.ts"],
+      "project": ["**/*.ts"],
+      "ignoreDependencies": ["zod", "@screenbase/config"]
+    }
+  }
+}

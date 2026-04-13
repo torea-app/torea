@@ -1,0 +1,3 @@
+{
+  "extends": "@screenbase/config/tsconfig.base.json"
+}

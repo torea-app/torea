@@ -1,0 +1,26 @@
+{
+  "name": "@screenbase/shared",
+  "private": true,
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./date": {
+      "default": "./src/date.ts"
+    },
+    "./schemas": {
+      "default": "./src/schemas/index.ts"
+    },
+    "./schemas/*": {
+      "default": "./src/schemas/*.ts"
+    }
+  },
+  "dependencies": {
+    "dayjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@screenbase/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

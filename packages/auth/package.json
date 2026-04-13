@@ -1,0 +1,28 @@
+{
+  "name": "@screenbase/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    },
+    "./permissions": {
+      "default": "./src/permissions.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@screenbase/db": "workspace:*",
+    "@screenbase/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "resend": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@screenbase/config": "workspace:*",
+    "typescript": "^5"
+  }
+}

@@ -65,9 +65,6 @@ export function RecordingDetailView({
             ref={playerRef}
             recordingId={recording.id}
             mimeType={recording.mimeType}
-            durationMs={recording.durationMs}
-            comments={comments}
-            onSeek={(ms) => playerRef.current?.seekTo(ms)}
           />
         </div>
       ) : (

@@ -22,11 +22,11 @@ export type QualityPreset = {
 export const QUALITY_PRESETS: Record<VideoQuality, QualityPreset> = {
   ultra: {
     label: "最高画質",
-    description: "3840×2160 / 60fps / 8Mbps",
+    description: "3840×2160 / 30fps / 5Mbps",
     videoWidth: 3840,
     videoHeight: 2160,
-    frameRate: 60,
-    videoBitrate: 8_000_000,
+    frameRate: 30,
+    videoBitrate: 5_000_000,
     audioBitrate: 320_000,
   },
   high: {
@@ -68,8 +68,11 @@ export const QUALITY_PRESET_ORDER: VideoQuality[] = [
 
 /** 録画設定（品質非依存） */
 export const RECORDING = {
-  /** MediaRecorder の ondataavailable 発火間隔（ミリ秒） */
-  CHUNK_INTERVAL_MS: 1000,
+  /** MediaRecorder の ondataavailable 発火間隔（ミリ秒）。
+   * 5Mbps (Ultra/High) × 8秒 = 5MB = MIN_PART_SIZE_BYTES と一致するため、
+   * 最高ビットレート時は 1チャンク = 1パートで直接アップロードに移行でき、
+   * 中間バッファリングと Blob 分割処理を回避する。 */
+  CHUNK_INTERVAL_MS: 8000,
   /** R2 multipart upload のパートあたり最小サイズ（バイト） */
   MIN_PART_SIZE_BYTES: 5 * 1024 * 1024,
   /** パート番号の上限 */

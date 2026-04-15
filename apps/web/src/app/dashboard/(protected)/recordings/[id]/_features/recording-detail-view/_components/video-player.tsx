@@ -22,8 +22,6 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CommentThread } from "../../../../_lib/types";
-import { TimelineMarkers } from "./timeline-markers";
 
 const mediaVariables = {
   "--media-primary-color": "var(--primary)",
@@ -45,16 +43,10 @@ export type VideoPlayerHandle = {
 type Props = {
   recordingId: string;
   mimeType: string;
-  durationMs?: number | null;
-  comments?: CommentThread[];
-  onSeek?: (ms: number) => void;
 };
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(
-  function VideoPlayer(
-    { recordingId, mimeType, durationMs, comments, onSeek },
-    ref,
-  ) {
+  function VideoPlayer({ recordingId, mimeType }, ref) {
     const videoUrl = `${env.NEXT_PUBLIC_SERVER_URL}/api/recordings/${recordingId}/stream`;
     const [isLoading, setIsLoading] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -137,15 +129,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(
             <MediaVolumeRange className="p-2.5" />
           </MediaControlBar>
         </MediaController>
-
-        {/* タイムラインマーカー（コントロールバーの上に重ねる） */}
-        {comments && comments.length > 0 && durationMs && onSeek && (
-          <TimelineMarkers
-            comments={comments}
-            durationMs={durationMs}
-            onSeek={onSeek}
-          />
-        )}
       </div>
     );
   },

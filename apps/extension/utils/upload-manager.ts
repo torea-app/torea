@@ -13,7 +13,7 @@ type UploadManagerOptions = {
 /**
  * チャンク分割アップロードマネージャー
  *
- * MediaRecorder の ondataavailable で生成されるチャンク（約1秒ごと）をバッファリングし、
+ * MediaRecorder の ondataavailable で生成されるチャンク（8秒ごと）をバッファリングし、
  * 5MB 以上たまったら1つの「パート」としてサーバーに PUT アップロードする。
  * サーバーが R2 multipart upload のパートとして保存する。
  */

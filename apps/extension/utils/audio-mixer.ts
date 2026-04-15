@@ -25,19 +25,66 @@ export type AudioMixerResult = {
 /**
  * タブ音声とマイク音声を Web Audio API でミキシングする。
  *
- * - タブ音声: tabCapture で取得した MediaStream の音声トラック
- * - マイク音声: getUserMedia で取得（ハイパスフィルター + ダイナミクスコンプレッサー付き）
- * - 両方を MediaStreamDestination に接続し、1つの MediaStream として出力
+ * マイク無効時は AudioContext を使わず、タブ音声をそのまま返す。
+ * Chrome の tabCapture はキャプチャした音声をスピーカー出力から「奪う」ため、
+ * Audio 要素でスピーカー再生を復元する。
+ *
+ * マイク有効時は Web Audio API で両方をミキシングし、
+ * マイク音声にはハイパスフィルター + ダイナミクスコンプレッサーを適用する。
  */
 export async function createAudioMixer(
   tabStream: MediaStream,
   micEnabled: boolean,
 ): Promise<AudioMixerResult> {
+  // --- マイク無効: AudioContext 不要の軽量パス ---
+  if (!micEnabled) {
+    return createTabOnlyMixer(tabStream);
+  }
+
+  // --- マイク有効: Web Audio API でミキシング ---
+  return createFullMixer(tabStream);
+}
+
+/**
+ * マイク無効時の軽量ミキサー。
+ * AudioContext を生成せず、Audio 要素でタブ音声をスピーカーに戻す。
+ */
+function createTabOnlyMixer(tabStream: MediaStream): AudioMixerResult {
+  const tabAudioTracks = tabStream.getAudioTracks();
+
+  // タブ音声をスピーカーに戻す（tabCapture が奪った音声を復元）
+  let playbackAudio: HTMLAudioElement | null = null;
+  if (tabAudioTracks.length > 0) {
+    playbackAudio = new Audio();
+    playbackAudio.srcObject = new MediaStream(tabAudioTracks);
+    playbackAudio.play().catch(() => {
+      // Offscreen Document で自動再生がブロックされた場合は無視
+    });
+  }
+
+  return {
+    mixedStream: new MediaStream(tabAudioTracks),
+    cleanup() {
+      if (playbackAudio) {
+        playbackAudio.pause();
+        playbackAudio.srcObject = null;
+        playbackAudio = null;
+      }
+    },
+  };
+}
+
+/**
+ * マイク有効時のフルミキサー。
+ * Web Audio API でタブ音声 + マイク音声をミキシングする。
+ */
+async function createFullMixer(
+  tabStream: MediaStream,
+): Promise<AudioMixerResult> {
   const audioContext = new AudioContext();
 
   // Offscreen Document はユーザーインタラクションのない文脈で実行されるため、
   // ブラウザが AudioContext を "suspended" 状態で作成することがある。
-  // resume() を明示的に呼ばないと音声が録音されないため、ここで確認する。
   if (audioContext.state === "suspended") {
     await audioContext.resume();
   }
@@ -45,70 +92,59 @@ export async function createAudioMixer(
   const destination = audioContext.createMediaStreamDestination();
 
   // --- タブ音声 ---
-  // Chrome の tabCapture はキャプチャした音声をスピーカー出力から「奪う」ため、
-  // 録画用の destination に加えて audioContext.destination（スピーカー）にも接続し、
-  // ユーザーが録画中も音声を聞けるようにする。
   const tabAudioTracks = tabStream.getAudioTracks();
   if (tabAudioTracks.length > 0) {
     const tabAudioStream = new MediaStream(tabAudioTracks);
     const tabSource = audioContext.createMediaStreamSource(tabAudioStream);
-    const tabGain = audioContext.createGain();
-    tabGain.gain.value = 1.0;
-    tabSource.connect(tabGain);
-    tabGain.connect(destination);
-    tabGain.connect(audioContext.destination);
+    // タブ音声は録画用 destination + スピーカーの両方に接続
+    tabSource.connect(destination);
+    tabSource.connect(audioContext.destination);
   }
 
   // --- マイク音声 ---
   let micStream: MediaStream | null = null;
-  if (micEnabled) {
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
-    } catch (error) {
-      audioContext.close();
-      throw new Error(getMicErrorMessage(error));
-    }
-
-    const micSource = audioContext.createMediaStreamSource(micStream);
-
-    // ハイパスフィルター: 80Hz 以下のノイズを除去
-    const highpassFilter = audioContext.createBiquadFilter();
-    highpassFilter.type = "highpass";
-    highpassFilter.frequency.value = 80;
-
-    // ダイナミクスコンプレッサー: 音量の均一化
-    const compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.value = -24;
-    compressor.ratio.value = 4;
-    compressor.knee.value = 10;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.25;
-
-    const micGain = audioContext.createGain();
-    micGain.gain.value = 1.0;
-
-    micSource
-      .connect(highpassFilter)
-      .connect(compressor)
-      .connect(micGain)
-      .connect(destination);
-  }
-
-  function cleanup() {
-    for (const track of micStream?.getTracks() ?? []) {
-      track.stop();
-    }
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        // タブ音声がスピーカー → マイクに回り込むのを Chrome AEC で除去する。
+        // false にするとタブ音声が録画に2重で混入し「重なった音」になる。
+        echoCancellation: true,
+        // 環境ノイズ（キーボード打鍵音、エアコン等）を低減する。
+        noiseSuppression: true,
+        // ポンピング効果（音量が不自然に上下する）を防ぐため無効のまま。
+        // マイクゲインは compressor で均一化する。
+        autoGainControl: false,
+      },
+    });
+  } catch (error) {
     audioContext.close();
+    throw new Error(getMicErrorMessage(error));
   }
+
+  const micSource = audioContext.createMediaStreamSource(micStream);
+
+  // ハイパスフィルター: 80Hz 以下のノイズを除去
+  const highpassFilter = audioContext.createBiquadFilter();
+  highpassFilter.type = "highpass";
+  highpassFilter.frequency.value = 80;
+
+  // ダイナミクスコンプレッサー: 音量の均一化
+  const compressor = audioContext.createDynamicsCompressor();
+  compressor.threshold.value = -24;
+  compressor.ratio.value = 4;
+  compressor.knee.value = 10;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.25;
+
+  micSource.connect(highpassFilter).connect(compressor).connect(destination);
 
   return {
     mixedStream: destination.stream,
-    cleanup,
+    cleanup() {
+      for (const track of micStream?.getTracks() ?? []) {
+        track.stop();
+      }
+      audioContext.close();
+    },
   };
 }

@@ -12,6 +12,10 @@ const app = new Hono<AppEnv>()
     "/*",
     cors({
       origin: (origin) => {
+        // Chrome 拡張のオリジン (chrome-extension://xxx) は常に許可
+        if (origin.startsWith("chrome-extension://")) {
+          return origin;
+        }
         const allowed = env.CORS_ORIGIN.split(",").map((o) => o.trim());
         return allowed.includes(origin) ? origin : allowed[0];
       },

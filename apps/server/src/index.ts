@@ -28,7 +28,8 @@ export default {
       const { recordingId, organizationId, r2Key } = msg.body;
 
       try {
-        const res = await aws.fetch(env.LAMBDA_FUNCTION_URL, {
+        const processUrl = new URL("/process", env.LAMBDA_FUNCTION_URL).href;
+        const res = await aws.fetch(processUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ r2Key }),

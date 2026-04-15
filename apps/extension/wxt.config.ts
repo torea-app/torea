@@ -5,9 +5,23 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   dev: { server: { port: 5555 } },
+  runner: { disabled: true },
   manifest: {
     name: "ScreenBase",
-    permissions: ["activeTab", "storage"],
+    permissions: [
+      "activeTab",
+      "storage",
+      "tabCapture",
+      "offscreen",
+      "scripting",
+    ],
+    web_accessible_resources: [
+      {
+        // Content Script が iframe として注入するために外部ページからアクセス可能にする
+        resources: ["mic-permission.html"],
+        matches: ["<all_urls>"],
+      },
+    ],
     host_permissions: [
       // API サーバーへのリクエストに Cookie を自動付与するために必要
       // 開発: https://3000.mydevbox.pp.ua, 本番: https://api.screenbase.dpdns.org

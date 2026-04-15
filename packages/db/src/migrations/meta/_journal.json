@@ -8,6 +8,41 @@
       "when": 1776071067243,
       "tag": "0000_windy_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776075265133,
+      "tag": "0001_illegal_lila_cheney",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776103442811,
+      "tag": "0002_melted_stingray",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776139035093,
+      "tag": "0003_peaceful_starbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1776153973163,
+      "tag": "0004_petite_the_spike",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1776158088305,
+      "tag": "0005_acoustic_lester",
+      "breakpoints": true
     }
   ]
 }

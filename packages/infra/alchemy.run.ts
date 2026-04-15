@@ -1,8 +1,17 @@
+// ローカル開発時: Miniflare プロキシでクライアント切断時に発生する
+// AbortError の unhandled エラーによるクラッシュを防止する
+process.on("uncaughtException", (err) => {
+  if (err instanceof DOMException && err.name === "AbortError") return;
+  console.error("Uncaught exception:", err);
+  process.exit(1);
+});
+
 import alchemy from "alchemy";
 import {
 	D1Database,
 	KVNamespace,
 	Nextjs,
+	Queue,
 	R2Bucket,
 	Worker,
 } from "alchemy/cloudflare";
@@ -15,6 +24,9 @@ import { config } from "dotenv";
 if (!process.env.ALCHEMY_DEPLOY) {
   config({ path: "../../.env.local" });
 }
+
+// USE_REMOTE_BINDINGS=true でローカル開発時もリモートの D1/R2/KV/Queue を使用
+const useRemoteBindings = process.env.USE_REMOTE_BINDINGS === "true";
 
 const app = await alchemy("screenbase", {
   stage: process.env.ALCHEMY_STAGE ?? "dev",
@@ -33,11 +45,21 @@ const app = await alchemy("screenbase", {
 
 const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
-const r2 = await R2Bucket("screenbase-storage");
+const r2 = await R2Bucket("screenbase-storage", {
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
+});
 
-const kv = await KVNamespace("screenbase-kv");
+const kv = await KVNamespace("screenbase-kv", {
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
+});
+
+const videoProcessingQueue = await Queue("video-processing-queue", {
+  name: "screenbase-video-processing",
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
+});
 
 export const web = await Nextjs("web", {
   cwd: "../../apps/web",
@@ -71,7 +93,16 @@ export const server = await Worker("server", {
     RESEND_API_KEY: alchemy.secret.env.RESEND_API_KEY!,
     FROM_EMAIL: alchemy.env.FROM_EMAIL!,
     COOKIE_DOMAIN: alchemy.env.COOKIE_DOMAIN!,
+    VIDEO_PROCESSING_QUEUE: videoProcessingQueue,
+    // AWS Lambda（動画変換処理）
+    LAMBDA_FUNCTION_URL: process.env.LAMBDA_FUNCTION_URL ?? "",
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? "",
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+    SKIP_VIDEO_PROCESSING: process.env.SKIP_VIDEO_PROCESSING ?? (process.env.ALCHEMY_DEPLOY ? "" : "true"),
   },
+  eventSources: [
+    { queue: videoProcessingQueue, settings: { maxRetries: 3, batchSize: 1 } },
+  ],
   dev: {
     port: 3000,
   },

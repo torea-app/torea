@@ -16,7 +16,14 @@ const app = new Hono<AppEnv>()
         return allowed.includes(origin) ? origin : allowed[0];
       },
       allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type", "Authorization"],
+      allowHeaders: ["Content-Type", "Authorization", "Range"],
+      exposeHeaders: [
+        "Content-Range",
+        "Accept-Ranges",
+        "Content-Length",
+        "ETag",
+      ],
+      maxAge: 3600,
       credentials: true,
     }),
   )

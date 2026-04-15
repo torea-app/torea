@@ -2,6 +2,7 @@
 
 import { Toaster } from "@screenbase/ui/components/ui/sonner";
 import { TooltipProvider } from "@screenbase/ui/components/ui/tooltip";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { ThemeProvider } from "./theme-provider";
 
@@ -13,10 +14,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <TooltipProvider>
-        {children}
-        <Toaster richColors />
-      </TooltipProvider>
+      <NuqsAdapter>
+        <TooltipProvider>
+          {children}
+          <Toaster richColors />
+        </TooltipProvider>
+      </NuqsAdapter>
     </ThemeProvider>
   );
 }

@@ -7,6 +7,23 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   serverExternalPackages: ["@screenbase/server"],
   allowedDevOrigins: ["3001.mydevbox.pp.ua"],
+  async headers() {
+    return [
+      {
+        source: "/embed/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors *",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "ALLOWALL",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

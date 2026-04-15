@@ -1,10 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "exclude": ["exports"],
+  "ignore": ["lambdas/**"],
   "workspaces": {
     ".": {
-      "ignoreDependencies": ["@screenbase/env", "dotenv", "zod"],
-      "ignore": ["scripts/**"]
+      "ignoreDependencies": ["@screenbase/env", "dotenv", "zod"]
     },
     "apps/web": {
       "entry": ["src/app/**/*.{ts,tsx}", "src/lib/*.ts", "open-next.config.ts"],
@@ -53,6 +53,22 @@
       "entry": ["alchemy.run.ts"],
       "project": ["**/*.ts"],
       "ignoreDependencies": ["zod", "@screenbase/config"]
+    },
+    "apps/extension": {
+      "entry": [
+        "wxt.config.ts",
+        "entrypoints/**/*.{ts,tsx}",
+        "lib/**/*.ts",
+        "types/**/*.ts",
+        "utils/**/*.ts"
+      ],
+      "project": [
+        "entrypoints/**/*.{ts,tsx}",
+        "lib/**/*.ts",
+        "types/**/*.ts",
+        "utils/**/*.ts"
+      ],
+      "ignoreDependencies": ["@wxt-dev/module-react", "tailwindcss"]
     }
   }
 }

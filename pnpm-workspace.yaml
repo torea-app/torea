@@ -10,9 +10,10 @@ catalog:
   '@types/react-dom': ^19.2.3
   alchemy: ^0.87.0
   better-auth: 1.5.5
+  dayjs: ^1.11.20
   dotenv: ^17.2.2
   libsql: 0.5.22
-  lucide-react: ^0.546.0
+  lucide-react: 0.546.0
   next-themes: 0.4.6
   react: ^19.2.3
   react-dom: ^19.2.3
@@ -21,5 +22,4 @@ catalog:
   tailwindcss: ^4.1.18
   typescript: ^5.8.3
   wrangler: ^4.54.0
-  dayjs: ^1.11.20
   zod: 4.3.6

@@ -53,3 +53,8 @@ jobs:
           # App secrets
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+
+          # AWS Lambda (video processing)
+          LAMBDA_FUNCTION_URL: ${{ secrets.LAMBDA_FUNCTION_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

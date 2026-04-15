@@ -20,11 +20,12 @@
     "depcruise:graph": "depcruise src --config .dependency-cruiser.cjs --include-only '^src' --output-type dot | dot -T svg > dependency-graph.svg"
   },
   "dependencies": {
+    "@hono/zod-validator": "catalog:",
+    "@paralleldrive/cuid2": "^3.3.0",
     "@screenbase/auth": "workspace:*",
     "@screenbase/db": "workspace:*",
     "@screenbase/env": "workspace:*",
-    "@screenbase/shared": "workspace:*",
-    "@hono/zod-validator": "catalog:",
+    "aws4fetch": "^1.0.20",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",

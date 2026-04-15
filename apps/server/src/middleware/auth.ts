@@ -13,3 +13,22 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   c.set("session", session.session);
   await next();
 });
+
+/**
+ * リクエストヘッダーからセッション情報を取得するヘルパー。
+ * 認証必須でないエンドポイント（公開共有アクセス）で使用する。
+ * セッションがない場合は null を返す（エラーをスローしない）。
+ *
+ * dep-cruiser: middleware/ は @screenbase/auth の使用が許可されている。
+ * share-access.route.ts はこの関数を import することで
+ * @screenbase/auth を直接 import せずにセッション情報を取得できる。
+ */
+export async function getSessionFromRequest(
+  headers: Headers,
+): Promise<{ userId: string } | null> {
+  const session = await auth.api.getSession({ headers });
+  if (!session?.user) {
+    return null;
+  }
+  return { userId: session.user.id };
+}

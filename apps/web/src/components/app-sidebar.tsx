@@ -12,6 +12,7 @@ import {
   Settings2Icon,
   UserCogIcon,
   UserPlusIcon,
+  VideoIcon,
 } from "lucide-react";
 import { NavMain, type NavSection } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -25,6 +26,11 @@ const navSections: NavSection[] = [
         title: "ダッシュボード",
         url: "/dashboard",
         icon: <LayoutDashboardIcon />,
+      },
+      {
+        title: "録画",
+        url: "/dashboard/recordings",
+        icon: <VideoIcon />,
       },
     ],
   },

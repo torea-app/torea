@@ -28,16 +28,9 @@ export interface Segment {
   text: string;
 }
 
-export interface Word {
-  word: string;
-  start: number;
-  end: number;
-}
-
 export interface ChunkResult {
   chunkIndex: number;
   chunkStartSec: number;
-  words: Word[];
   segments: GroqSegment[];
 }
 

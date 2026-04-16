@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import Groq from "groq-sdk";
-import type { ChunkResult, GroqSegment, Word } from "./types.js";
+import type { ChunkResult, GroqSegment } from "./types.js";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -12,39 +12,35 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 
 /**
- * 単一チャンクを Groq Whisper API に送信し、文字起こし結果を返す。
+ * 単一の音声ファイルを Groq Whisper API に送信し、セグメント単位の文字起こし結果を返す。
  */
 export async function transcribeChunk(
   chunkPath: string,
   language?: string,
   model?: string,
-): Promise<{ segments: GroqSegment[]; words: Word[]; text: string }> {
+): Promise<{ segments: GroqSegment[]; text: string }> {
   const response = await groq.audio.transcriptions.create({
     file: fs.createReadStream(chunkPath),
     model: model ?? DEFAULT_MODEL,
     response_format: "verbose_json",
-    timestamp_granularities: ["word", "segment"],
+    timestamp_granularities: ["segment"],
     ...(language ? { language } : {}),
     temperature: 0,
   });
 
-  // groq-sdk の verbose_json レスポンスには segments と words が含まれる
   const result = response as unknown as {
     text: string;
     segments: GroqSegment[];
-    words: Word[];
   };
 
   return {
     text: result.text ?? "",
     segments: result.segments ?? [],
-    words: result.words ?? [],
   };
 }
 
 /**
  * 複数チャンクを並列度 CONCURRENCY で Groq API に送信する。
- * RPM（20 requests/min）以内に収めるため同時実行数を制限する。
  */
 export async function transcribeChunksParallel(
   chunkPaths: string[],
@@ -74,7 +70,6 @@ export async function transcribeChunksParallel(
         return {
           chunkIndex: entry.chunkIndex,
           chunkStartSec: entry.chunkStartSec,
-          words: result.words,
           segments: result.segments,
         } satisfies ChunkResult;
       }),
@@ -88,13 +83,12 @@ export async function transcribeChunksParallel(
 
 /**
  * Groq API の 429/5xx エラーに対して指数バックオフでリトライする。
- * 400/413 等のクライアントエラーは即座にスローする。
  */
 async function transcribeWithRetry(
   chunkPath: string,
   language?: string,
   model?: string,
-): Promise<{ segments: GroqSegment[]; words: Word[]; text: string }> {
+): Promise<{ segments: GroqSegment[]; text: string }> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       return await transcribeChunk(chunkPath, language, model);

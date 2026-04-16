@@ -10,8 +10,13 @@ import {
 } from "@aws-sdk/client-s3";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { extractAudio, splitIntoChunks } from "./ffmpeg.js";
-import { transcribeChunksParallel } from "./groq-client.js";
+import {
+  extractAudio,
+  GROQ_FILE_SIZE_LIMIT,
+  getFileSize,
+  splitIntoChunks,
+} from "./ffmpeg.js";
+import { transcribeChunk, transcribeChunksParallel } from "./groq-client.js";
 import { mergeChunkResults } from "./merge.js";
 import type {
   TranscribeErrorResponse,
@@ -33,6 +38,11 @@ const s3 = new S3Client({
 });
 
 const BUCKET = process.env.R2_BUCKET_NAME ?? "";
+
+/** チャンク分割時の 1 チャンクの長さ（60 分） */
+const CHUNK_DURATION_SEC = 3600;
+/** チャンク間のオーバーラップ（10 秒） */
+const OVERLAP_SEC = 10;
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
@@ -105,7 +115,7 @@ app.post("/transcribe", async (c) => {
   }
 
   const inputPath = "/tmp/input_transcribe.mp4";
-  const audioPath = "/tmp/audio.flac";
+  const audioPath = "/tmp/audio.mp3";
   const chunkDir = "/tmp/chunks";
 
   try {
@@ -127,35 +137,82 @@ app.post("/transcribe", async (c) => {
     // @ts-expect-error -- S3 Body is a Readable stream in Node.js
     await pipeline(getRes.Body, writeStream);
 
-    // 2. ffmpeg で音声抽出（16kHz mono FLAC）
+    // 2. ffmpeg で音声抽出（16kHz mono MP3 32kbps）
     await extractAudio(inputPath, audioPath);
 
     // 入力動画は不要になったので即削除（/tmp 容量節約）
     await unlink(inputPath).catch(() => {});
 
-    // 3. チャンク分割（10 分 + 10 秒オーバーラップ）
-    const {
-      chunkPaths,
-      chunkStartsSec,
-      totalDuration: duration,
-    } = await splitIntoChunks(audioPath, chunkDir, 600, 10);
+    // 3. ファイルサイズに応じて単一リクエスト or チャンク分割
+    const audioSize = await getFileSize(audioPath);
 
-    // 音声ファイルは不要になったので即削除
-    await unlink(audioPath).catch(() => {});
+    let duration: number;
+    let chunkCount: number;
+    let merged: {
+      segments: { start: number; end: number; text: string }[];
+      fullText: string;
+    };
 
-    // 4. Groq API に並列送信
-    const chunkResults = await transcribeChunksParallel(
-      chunkPaths,
-      chunkStartsSec,
-      language,
-      model,
-    );
+    if (audioSize < GROQ_FILE_SIZE_LIMIT) {
+      // 25 MB 未満: 単一リクエスト（Groq のセグメントをそのまま使用）
+      const result = await transcribeChunk(audioPath, language, model);
+      const segments = result.segments
+        .filter((seg) => {
+          if (seg.no_speech_prob > 0.6) return false;
+          if (seg.avg_logprob < -1.0) return false;
+          if (seg.compression_ratio > 2.4) return false;
+          return true;
+        })
+        .map((seg) => ({
+          start: seg.start,
+          end: seg.end,
+          text: seg.text,
+        }));
 
-    // 送信完了したチャンクファイルを即削除
-    await Promise.allSettled(chunkPaths.map((p) => unlink(p)));
+      // ffprobe で再生時間取得（音声ファイル削除前に）
+      const { stdout } = await execFileAsync("ffprobe", [
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "csv=p=0",
+        audioPath,
+      ]);
+      duration = Number.parseFloat(stdout.trim()) || 0;
+      chunkCount = 1;
+      merged = {
+        segments,
+        fullText: segments.map((s) => s.text).join(""),
+      };
+    } else {
+      // 25 MB 以上: チャンク分割（60 分 + 10 秒オーバーラップ）
+      const splitResult = await splitIntoChunks(
+        audioPath,
+        chunkDir,
+        CHUNK_DURATION_SEC,
+        OVERLAP_SEC,
+      );
+      duration = splitResult.totalDuration;
+      chunkCount = splitResult.chunkPaths.length;
 
-    // 5. マージ
-    const merged = mergeChunkResults(chunkResults, 10);
+      // 音声ファイルは不要になったので即削除
+      await unlink(audioPath).catch(() => {});
+
+      // Groq API に並列送信
+      const chunkResults = await transcribeChunksParallel(
+        splitResult.chunkPaths,
+        splitResult.chunkStartsSec,
+        language,
+        model,
+      );
+
+      // チャンクファイルを即削除
+      await Promise.allSettled(splitResult.chunkPaths.map((p) => unlink(p)));
+
+      // セグメント単位でマージ
+      merged = mergeChunkResults(chunkResults, OVERLAP_SEC);
+    }
 
     const processingTime = (Date.now() - startTime) / 1000;
 
@@ -167,7 +224,7 @@ app.post("/transcribe", async (c) => {
       fullText: merged.fullText,
       segments: merged.segments,
       model: model ?? "whisper-large-v3-turbo",
-      chunkCount: chunkPaths.length,
+      chunkCount,
       processingTime,
     };
 

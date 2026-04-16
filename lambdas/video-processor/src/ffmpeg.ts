@@ -1,14 +1,17 @@
 import { execFile } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { SplitResult } from "./types.js";
 
 const execFileAsync = promisify(execFile);
 
+/** Groq API のファイルサイズ上限（25 MB） */
+export const GROQ_FILE_SIZE_LIMIT = 25 * 1024 * 1024;
+
 /**
- * 動画ファイルから音声を抽出する（16kHz モノラル FLAC）。
- * Whisper の最適入力フォーマットに変換する。
+ * 動画ファイルから音声を抽出する（16kHz モノラル MP3 32kbps）。
+ * MP3 32kbps: ~4 KB/s → 25 MB で約 104 分収容可能。
  */
 export async function extractAudio(
   inputPath: string,
@@ -23,10 +26,18 @@ export async function extractAudio(
     "16000",
     "-ac",
     "1",
-    "-c:a",
-    "flac",
+    "-b:a",
+    "32k",
     outputPath,
   ]);
+}
+
+/**
+ * ファイルサイズ（バイト）を取得する。
+ */
+export async function getFileSize(filePath: string): Promise<number> {
+  const s = await stat(filePath);
+  return s.size;
 }
 
 /**
@@ -70,7 +81,7 @@ export async function splitIntoChunks(
   let start = 0;
 
   while (start < totalDuration) {
-    const chunkFileName = `chunk_${String(chunkIndex).padStart(3, "0")}.flac`;
+    const chunkFileName = `chunk_${String(chunkIndex).padStart(3, "0")}.mp3`;
     const chunkPath = path.join(outputDir, chunkFileName);
 
     // 最終チャンク: 残り全体を含める
@@ -87,8 +98,8 @@ export async function splitIntoChunks(
       String(start),
       "-t",
       String(duration),
-      "-c:a",
-      "flac",
+      "-b:a",
+      "32k",
       chunkPath,
     ]);
 

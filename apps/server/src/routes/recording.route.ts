@@ -13,6 +13,7 @@ import { createRecordingService } from "../use-cases/recording/recording.service
 import { createViewAnalyticsService } from "../use-cases/view-analytics/view-analytics.service";
 import { createCommentSchema, updateCommentSchema } from "./comment.schemas";
 import {
+  bulkDeleteRecordingsSchema,
   completeRecordingSchema,
   createRecordingSchema,
   listRecordingsSchema,
@@ -173,6 +174,32 @@ export const recordingRoute = new Hono<AppEnv>()
       });
 
       return c.json(result);
+    },
+  )
+
+  // =============================================
+  // POST /api/recordings/bulk-delete — 一括削除
+  // =============================================
+  .post(
+    "/bulk-delete",
+    requirePermission("captures", "delete"),
+    zValidator("json", bulkDeleteRecordingsSchema),
+    async (c) => {
+      const { ids } = c.req.valid("json");
+      const organizationId = c.get("activeOrganizationId");
+
+      const service = createRecordingService({
+        repo: createRecordingRepository(c.env.DB),
+        storage: new R2StorageClient(c.env.R2),
+        generateId: createId,
+      });
+
+      const { deletedCount } = await service.deleteRecordings({
+        recordingIds: ids,
+        organizationId,
+      });
+
+      return c.json({ deletedCount });
     },
   )
 

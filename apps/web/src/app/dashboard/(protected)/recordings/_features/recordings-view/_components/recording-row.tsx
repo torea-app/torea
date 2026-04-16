@@ -12,6 +12,7 @@ import {
 } from "@screenbase/ui/components/ui/alert-dialog";
 import { Badge } from "@screenbase/ui/components/ui/badge";
 import { Button } from "@screenbase/ui/components/ui/button";
+import { Checkbox } from "@screenbase/ui/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +36,13 @@ const statusConfig = {
   failed: { label: "失敗", variant: "destructive" as const },
 };
 
-export function RecordingRow({ recording }: { recording: Recording }) {
+type Props = {
+  recording: Recording;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+};
+
+export function RecordingRow({ recording, selected, onToggleSelect }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const status = statusConfig[recording.status];
@@ -53,6 +60,13 @@ export function RecordingRow({ recording }: { recording: Recording }) {
 
   return (
     <TableRow>
+      <TableCell>
+        <Checkbox
+          checked={selected}
+          onCheckedChange={() => onToggleSelect(recording.id)}
+          aria-label={`${recording.title} を選択`}
+        />
+      </TableCell>
       <TableCell className="max-w-xs">
         {recording.status === "completed" ||
         recording.status === "processing" ? (

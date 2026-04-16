@@ -24,6 +24,11 @@ export const completeRecordingSchema = z.object({
   fileSize: z.number().int().min(0).optional(),
 });
 
+/** POST /api/recordings/bulk-delete — 一括削除 */
+export const bulkDeleteRecordingsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+});
+
 /** GET /api/recordings — 一覧取得 */
 export const listRecordingsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),

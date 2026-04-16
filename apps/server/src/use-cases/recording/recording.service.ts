@@ -27,6 +27,7 @@ type StorageClient = {
   ): Promise<void>;
   abortMultipartUpload(key: string, uploadId: string): Promise<void>;
   delete(key: string): Promise<void>;
+  deleteMany(keys: string[]): Promise<void>;
 };
 
 type QueueClient = {
@@ -249,6 +250,52 @@ export function createRecordingService({
       }
 
       await repo.delete(rec.id, params.organizationId);
+    },
+
+    /**
+     * 複数の録画を一括削除する。
+     * R2 オブジェクトと DB レコードを両方削除する。
+     */
+    async deleteRecordings(params: {
+      recordingIds: string[];
+      organizationId: string;
+    }) {
+      const records = await repo.findByIds(
+        params.recordingIds,
+        params.organizationId,
+      );
+      if (records.length === 0) {
+        return { deletedCount: 0 };
+      }
+
+      // uploading 中のレコードは multipart abort を best-effort で実行
+      for (const rec of records) {
+        if (rec.status === "uploading") {
+          try {
+            await storage.abortMultipartUpload(rec.r2Key, rec.uploadId);
+          } catch {
+            // abort 失敗は無視
+          }
+        }
+      }
+
+      // completed/processing のレコードの R2 キーを収集して一括削除
+      const keysToDelete = records
+        .filter(
+          (rec) => rec.status === "completed" || rec.status === "processing",
+        )
+        .map((rec) => rec.r2Key);
+
+      if (keysToDelete.length > 0) {
+        await storage.deleteMany(keysToDelete);
+      }
+
+      const deletedCount = await repo.deleteMany(
+        records.map((rec) => rec.id),
+        params.organizationId,
+      );
+
+      return { deletedCount };
     },
   };
 }

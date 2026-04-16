@@ -1,5 +1,5 @@
 import { recording } from "@screenbase/db/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 export type RecordingRow = typeof recording.$inferSelect;
@@ -93,6 +93,37 @@ export function createRecordingRepository(d1: D1Database) {
         )
         .returning({ id: recording.id });
       return result.length > 0;
+    },
+
+    async findByIds(
+      ids: string[],
+      organizationId: string,
+    ): Promise<RecordingRow[]> {
+      if (ids.length === 0) return [];
+      return db
+        .select()
+        .from(recording)
+        .where(
+          and(
+            inArray(recording.id, ids),
+            eq(recording.organizationId, organizationId),
+          ),
+        )
+        .all();
+    },
+
+    async deleteMany(ids: string[], organizationId: string): Promise<number> {
+      if (ids.length === 0) return 0;
+      const result = await db
+        .delete(recording)
+        .where(
+          and(
+            inArray(recording.id, ids),
+            eq(recording.organizationId, organizationId),
+          ),
+        )
+        .returning({ id: recording.id });
+      return result.length;
     },
 
     async delete(id: string, organizationId: string): Promise<boolean> {

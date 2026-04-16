@@ -43,6 +43,13 @@
       "when": 1776158088305,
       "tag": "0005_acoustic_lester",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1776323332880,
+      "tag": "0006_fine_moondragon",
+      "breakpoints": true
     }
   ]
 }

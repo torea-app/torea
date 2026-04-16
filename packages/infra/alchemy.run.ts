@@ -61,6 +61,11 @@ const videoProcessingQueue = await Queue("video-processing-queue", {
   ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
+const transcriptionQueue = await Queue("transcription-queue", {
+  name: "screenbase-transcription",
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
+});
+
 export const web = await Nextjs("web", {
   cwd: "../../apps/web",
   domains: ["screenbase.dpdns.org"],
@@ -95,6 +100,7 @@ export const server = await Worker("server", {
     FROM_EMAIL: alchemy.env.FROM_EMAIL!,
     COOKIE_DOMAIN: alchemy.env.COOKIE_DOMAIN!,
     VIDEO_PROCESSING_QUEUE: videoProcessingQueue,
+    TRANSCRIPTION_QUEUE: transcriptionQueue,
     // AWS Lambda（動画変換処理）
     LAMBDA_FUNCTION_URL: alchemy.env.LAMBDA_FUNCTION_URL!,
     LAMBDA_REGION: alchemy.env.LAMBDA_REGION!,
@@ -105,9 +111,15 @@ export const server = await Worker("server", {
     SKIP_VIDEO_PROCESSING: process.env.ALCHEMY_DEPLOY
       ? (process.env.SKIP_VIDEO_PROCESSING ?? "")
       : "true",
+    // ローカル開発時は必ず true（文字起こしをスキップ）。
+    // 本番デプロイ時のみ env var を参照し、未設定なら空文字（= 文字起こしを実行）。
+    SKIP_TRANSCRIPTION: process.env.ALCHEMY_DEPLOY
+      ? (process.env.SKIP_TRANSCRIPTION ?? "")
+      : "true",
   },
   eventSources: [
     { queue: videoProcessingQueue, settings: { maxRetries: 3, batchSize: 1 } },
+    { queue: transcriptionQueue, settings: { maxRetries: 3, batchSize: 1 } },
   ],
   dev: {
     port: 3000,

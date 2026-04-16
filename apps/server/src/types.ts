@@ -12,11 +12,13 @@ export type AppEnv = {
     KV: KVNamespace;
     COOKIE_DOMAIN: string;
     VIDEO_PROCESSING_QUEUE: Queue;
+    TRANSCRIPTION_QUEUE: Queue;
     LAMBDA_FUNCTION_URL: string;
     LAMBDA_REGION: string;
     AWS_ACCESS_KEY_ID: string;
     AWS_SECRET_ACCESS_KEY: string;
     SKIP_VIDEO_PROCESSING: string;
+    SKIP_TRANSCRIPTION: string;
   };
   Variables: {
     user: typeof auth.$Infer.Session.user;

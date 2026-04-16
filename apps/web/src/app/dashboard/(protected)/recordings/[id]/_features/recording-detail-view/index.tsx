@@ -25,6 +25,7 @@ import { deleteRecordingAndRedirect } from "../../_lib/actions";
 import { CommentSection } from "./_components/comment-section";
 import { ShareDialog } from "./_components/share-dialog";
 import { ThumbnailGenerator } from "./_components/thumbnail-generator";
+import { TranscriptionPanel } from "./_components/transcription-panel";
 import {
   VideoPlayer,
   type VideoPlayerHandle,
@@ -176,6 +177,12 @@ export function RecordingDetailView({
           setComments={setComments}
           playerRef={playerRef}
         />
+      )}
+
+      {/* 文字起こしセクション（completed/processing の場合） */}
+      {(recording.status === "completed" ||
+        recording.status === "processing") && (
+        <TranscriptionPanel recordingId={recording.id} playerRef={playerRef} />
       )}
     </div>
   );

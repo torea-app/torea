@@ -1,4 +1,4 @@
-import { env } from "@screenbase/env/web";
+import { env } from "@torea/env/web";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EmbedOrgMembersView } from "./_components/embed-org-members-view";

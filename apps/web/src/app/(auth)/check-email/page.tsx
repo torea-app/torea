@@ -1,11 +1,11 @@
-import { Alert, AlertDescription } from "@screenbase/ui/components/ui/alert";
+import { Alert, AlertDescription } from "@torea/ui/components/ui/alert";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@screenbase/ui/components/ui/card";
+} from "@torea/ui/components/ui/card";
 import { InfoIcon, MailIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";

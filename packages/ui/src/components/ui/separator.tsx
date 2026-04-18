@@ -2,7 +2,7 @@
 
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator"
 
-import { cn } from "@screenbase/ui/lib/utils"
+import { cn } from "@torea/ui/lib/utils"
 
 function Separator({
   className,

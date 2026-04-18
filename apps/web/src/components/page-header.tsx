@@ -7,9 +7,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@screenbase/ui/components/ui/breadcrumb";
-import { Separator } from "@screenbase/ui/components/ui/separator";
-import { SidebarTrigger } from "@screenbase/ui/components/ui/sidebar";
+} from "@torea/ui/components/ui/breadcrumb";
+import { Separator } from "@torea/ui/components/ui/separator";
+import { SidebarTrigger } from "@torea/ui/components/ui/sidebar";
 import { Fragment } from "react";
 
 type BreadcrumbEntry = {

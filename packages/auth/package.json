@@ -1,5 +1,5 @@
 {
-  "name": "@screenbase/auth",
+  "name": "@torea/auth",
   "type": "module",
   "exports": {
     ".": {
@@ -14,15 +14,15 @@
   },
   "scripts": {},
   "dependencies": {
-    "@screenbase/db": "workspace:*",
-    "@screenbase/env": "workspace:*",
+    "@torea/db": "workspace:*",
+    "@torea/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "resend": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@screenbase/config": "workspace:*",
+    "@torea/config": "workspace:*",
     "typescript": "^5"
   }
 }

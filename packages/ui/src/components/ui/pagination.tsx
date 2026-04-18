@@ -1,7 +1,7 @@
 import * as React from "react"
 
-import { cn } from "@screenbase/ui/lib/utils"
-import { Button } from "@screenbase/ui/components/ui/button"
+import { cn } from "@torea/ui/lib/utils"
+import { Button } from "@torea/ui/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {

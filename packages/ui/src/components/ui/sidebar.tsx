@@ -5,24 +5,24 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { useIsMobile } from "@screenbase/ui/hooks/use-mobile"
-import { cn } from "@screenbase/ui/lib/utils"
-import { Button } from "@screenbase/ui/components/ui/button"
-import { Input } from "@screenbase/ui/components/ui/input"
-import { Separator } from "@screenbase/ui/components/ui/separator"
+import { useIsMobile } from "@torea/ui/hooks/use-mobile"
+import { cn } from "@torea/ui/lib/utils"
+import { Button } from "@torea/ui/components/ui/button"
+import { Input } from "@torea/ui/components/ui/input"
+import { Separator } from "@torea/ui/components/ui/separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@screenbase/ui/components/ui/sheet"
-import { Skeleton } from "@screenbase/ui/components/ui/skeleton"
+} from "@torea/ui/components/ui/sheet"
+import { Skeleton } from "@torea/ui/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@screenbase/ui/components/ui/tooltip"
+} from "@torea/ui/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"

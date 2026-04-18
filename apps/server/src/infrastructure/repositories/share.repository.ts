@@ -1,4 +1,4 @@
-import { shareLink } from "@screenbase/db/schema";
+import { shareLink } from "@torea/db/schema";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 

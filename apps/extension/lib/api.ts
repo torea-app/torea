@@ -3,8 +3,7 @@ import type { UploadedPart } from "../types/recording";
 /** API サーバーのベース URL
  * 開発時は .env の VITE_API_URL を使用し、未設定の場合は本番 URL にフォールバックする。
  * 誤って dev サーバーへ繋がることを防ぐため、フォールバックは本番 URL にする。 */
-const API_URL =
-  import.meta.env.VITE_API_URL ?? "https://api.screenbase.dpdns.org";
+const API_URL = import.meta.env.VITE_API_URL ?? "https://api.torea.app";
 
 /** API エラー */
 export class ApiError extends Error {

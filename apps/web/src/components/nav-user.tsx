@@ -4,7 +4,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@screenbase/ui/components/ui/avatar";
+} from "@torea/ui/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,14 +13,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@screenbase/ui/components/ui/dropdown-menu";
+} from "@torea/ui/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@screenbase/ui/components/ui/sidebar";
-import { Skeleton } from "@screenbase/ui/components/ui/skeleton";
+} from "@torea/ui/components/ui/sidebar";
+import { Skeleton } from "@torea/ui/components/ui/skeleton";
 import { ChevronsUpDownIcon, LogOutIcon, Settings2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

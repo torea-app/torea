@@ -1,11 +1,11 @@
-import "@screenbase/env/web";
+import "@torea/env/web";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
   reactCompiler: true,
-  serverExternalPackages: ["@screenbase/server"],
+  serverExternalPackages: ["@torea/server"],
   allowedDevOrigins: ["3001.mydevbox.pp.ua"],
   async headers() {
     return [

@@ -1,4 +1,4 @@
-import type { auth } from "@screenbase/auth";
+import type { auth } from "@torea/auth";
 
 export type AppEnv = {
   Bindings: {
@@ -13,6 +13,11 @@ export type AppEnv = {
     COOKIE_DOMAIN: string;
     VIDEO_PROCESSING_QUEUE: Queue;
     TRANSCRIPTION_QUEUE: Queue;
+    WEBHOOK_DELIVERY_QUEUE: Queue<{
+      deliveryId: string;
+      organizationId: string;
+    }>;
+    WEBHOOK_SECRET_KV: KVNamespace;
     LAMBDA_FUNCTION_URL: string;
     LAMBDA_REGION: string;
     AWS_ACCESS_KEY_ID: string;

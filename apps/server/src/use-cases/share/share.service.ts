@@ -73,7 +73,7 @@ export function createShareService({ repo, recordingRepo, generateId }: Deps) {
       }
 
       const id = generateId();
-      return repo.create({
+      const shareLink = await repo.create({
         id,
         organizationId: params.organizationId,
         createdByUserId: params.createdByUserId,
@@ -82,6 +82,8 @@ export function createShareService({ repo, recordingRepo, generateId }: Deps) {
         passwordHash,
         passwordSalt,
       });
+
+      return shareLink;
     },
 
     /**

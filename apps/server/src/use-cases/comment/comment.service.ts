@@ -105,8 +105,9 @@ export function createCommentService({ repo, generateId }: Deps) {
         }
       }
 
+      const commentId = generateId();
       await repo.create({
-        id: generateId(),
+        id: commentId,
         recordingId: params.recordingId,
         userId: params.userId,
         body: params.body,

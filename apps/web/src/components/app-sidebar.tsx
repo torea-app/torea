@@ -6,13 +6,14 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@screenbase/ui/components/ui/sidebar";
+} from "@torea/ui/components/ui/sidebar";
 import {
   LayoutDashboardIcon,
   Settings2Icon,
   UserCogIcon,
   UserPlusIcon,
   VideoIcon,
+  WebhookIcon,
 } from "lucide-react";
 import { NavMain, type NavSection } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -46,6 +47,11 @@ const navSections: NavSection[] = [
         title: "組織設定",
         url: "/dashboard/settings",
         icon: <Settings2Icon />,
+      },
+      {
+        title: "Webhook",
+        url: "/dashboard/webhooks",
+        icon: <WebhookIcon />,
       },
       {
         title: "アカウント",

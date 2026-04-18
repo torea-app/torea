@@ -1,15 +1,15 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@screenbase/ui/components/ui/card";
-import { Input } from "@screenbase/ui/components/ui/input";
-import { Label } from "@screenbase/ui/components/ui/label";
+} from "@torea/ui/components/ui/card";
+import { Input } from "@torea/ui/components/ui/input";
+import { Label } from "@torea/ui/components/ui/label";
 import { MailIcon } from "lucide-react";
 import Link from "next/link";
 import { useForgotPasswordForm } from "./use-form";

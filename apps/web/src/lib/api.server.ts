@@ -1,5 +1,5 @@
-import { env } from "@screenbase/env/web";
-import { hcWithType } from "@screenbase/server/hc";
+import { env } from "@torea/env/web";
+import { hcWithType } from "@torea/server/hc";
 import { headers } from "next/headers";
 
 export async function createServerApi() {

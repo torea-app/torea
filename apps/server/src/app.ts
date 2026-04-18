@@ -1,4 +1,4 @@
-import { env } from "@screenbase/env/server";
+import { env } from "@torea/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";

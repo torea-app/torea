@@ -1,15 +1,15 @@
 "use client";
 
-import { env } from "@screenbase/env/web";
+import { env } from "@torea/env/web";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@screenbase/ui/components/ui/avatar";
-import { Button } from "@screenbase/ui/components/ui/button";
-import { Checkbox } from "@screenbase/ui/components/ui/checkbox";
-import { Separator } from "@screenbase/ui/components/ui/separator";
-import { Textarea } from "@screenbase/ui/components/ui/textarea";
+} from "@torea/ui/components/ui/avatar";
+import { Button } from "@torea/ui/components/ui/button";
+import { Checkbox } from "@torea/ui/components/ui/checkbox";
+import { Separator } from "@torea/ui/components/ui/separator";
+import { Textarea } from "@torea/ui/components/ui/textarea";
 import { MessageSquareIcon, ReplyIcon, SendIcon } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";

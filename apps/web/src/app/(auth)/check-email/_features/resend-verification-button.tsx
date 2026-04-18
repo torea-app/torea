@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";

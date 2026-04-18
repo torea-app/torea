@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
-import { Checkbox } from "@screenbase/ui/components/ui/checkbox";
-import { Textarea } from "@screenbase/ui/components/ui/textarea";
+import { Button } from "@torea/ui/components/ui/button";
+import { Checkbox } from "@torea/ui/components/ui/checkbox";
+import { Textarea } from "@torea/ui/components/ui/textarea";
 import { SendIcon } from "lucide-react";
 import { type RefObject, useCallback, useState } from "react";
 import { toast } from "sonner";

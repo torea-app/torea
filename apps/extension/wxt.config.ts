@@ -5,9 +5,9 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   dev: { server: { port: 5555 } },
-  runner: { disabled: true },
+  webExt: { disabled: true },
   manifest: {
-    name: "ScreenBase",
+    name: "Torea",
     permissions: [
       "activeTab",
       "storage",
@@ -24,7 +24,7 @@ export default defineConfig({
     ],
     host_permissions: [
       // API サーバーへのリクエストに Cookie を自動付与するために必要
-      // 開発: https://3000.mydevbox.pp.ua, 本番: https://api.screenbase.dpdns.org
+      // 開発: https://3000.mydevbox.pp.ua, 本番: https://api.torea.app
       `${process.env.VITE_API_URL ?? "https://3000.mydevbox.pp.ua"}/*`,
     ],
   },
@@ -34,15 +34,15 @@ export default defineConfig({
       alias: [
         // globals.css は src/styles/ 配下にあるため先に個別指定する
         {
-          find: "@screenbase/ui/globals.css",
+          find: "@torea/ui/globals.css",
           replacement: path.resolve(
             __dirname,
             "../../packages/ui/src/styles/globals.css",
           ),
         },
-        // その他の @screenbase/ui/* は src/ 配下にマッピング
+        // その他の @torea/ui/* は src/ 配下にマッピング
         {
-          find: "@screenbase/ui",
+          find: "@torea/ui",
           replacement: path.resolve(__dirname, "../../packages/ui/src"),
         },
       ],

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 
-import { cn } from "@screenbase/ui/lib/utils"
+import { cn } from "@torea/ui/lib/utils"
 
 function Avatar({
   className,

@@ -1,5 +1,5 @@
-import { ac, admin, member, owner } from "@screenbase/auth/permissions";
-import { env } from "@screenbase/env/web";
+import { ac, admin, member, owner } from "@torea/auth/permissions";
+import { env } from "@torea/env/web";
 import { organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { Toaster } from "@screenbase/ui/components/ui/sonner";
-import { TooltipProvider } from "@screenbase/ui/components/ui/tooltip";
+import { Toaster } from "@torea/ui/components/ui/sonner";
+import { TooltipProvider } from "@torea/ui/components/ui/tooltip";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { ThemeProvider } from "./theme-provider";

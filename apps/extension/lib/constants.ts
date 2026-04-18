@@ -122,5 +122,4 @@ export const ERROR_MESSAGES = {
 /** Web ダッシュボードの URL
  * 開発時は .env の VITE_WEB_URL を使用し、未設定の場合は本番 URL にフォールバックする。
  * 誤って dev サーバーへ繋がることを防ぐため、フォールバックは本番 URL にする。 */
-export const WEB_URL =
-  import.meta.env.VITE_WEB_URL ?? "https://screenbase.dpdns.org";
+export const WEB_URL = import.meta.env.VITE_WEB_URL ?? "https://torea.app";

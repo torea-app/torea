@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@screenbase/ui/components/ui/dialog";
+} from "@torea/ui/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,16 +18,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@screenbase/ui/components/ui/dropdown-menu";
-import { Input } from "@screenbase/ui/components/ui/input";
-import { Label } from "@screenbase/ui/components/ui/label";
+} from "@torea/ui/components/ui/dropdown-menu";
+import { Input } from "@torea/ui/components/ui/input";
+import { Label } from "@torea/ui/components/ui/label";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@screenbase/ui/components/ui/sidebar";
-import { Skeleton } from "@screenbase/ui/components/ui/skeleton";
+} from "@torea/ui/components/ui/sidebar";
+import { Skeleton } from "@torea/ui/components/ui/skeleton";
 import { BuildingIcon, ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

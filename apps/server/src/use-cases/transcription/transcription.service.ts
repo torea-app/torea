@@ -1,4 +1,5 @@
 import { NotFoundError } from "../../domain/errors/domain.error";
+import type { WebhookEventEnvelope } from "../../domain/types/webhook-events";
 import type {
   createTranscriptionRepository,
   TranscriptionRow,
@@ -9,6 +10,8 @@ type Deps = {
   generateId: () => string;
   queue?: Queue;
   skipTranscription?: boolean;
+  /** Webhook 発火用 (optional) */
+  onEvent?: (envelope: WebhookEventEnvelope) => Promise<void>;
 };
 
 export function createTranscriptionService({
@@ -16,7 +19,16 @@ export function createTranscriptionService({
   generateId,
   queue,
   skipTranscription,
+  onEvent,
 }: Deps) {
+  async function emitSafe(envelope: WebhookEventEnvelope): Promise<void> {
+    if (!onEvent) return;
+    try {
+      await onEvent(envelope);
+    } catch (err) {
+      console.error("Webhook emit failed", err);
+    }
+  }
   return {
     /**
      * 文字起こしジョブを開始する。
@@ -53,6 +65,19 @@ export function createTranscriptionService({
           r2Key: params.r2Key,
         });
       }
+
+      await emitSafe({
+        id: generateId(),
+        name: "transcription.started",
+        version: "v1",
+        createdAt: new Date().toISOString(),
+        organizationId: params.organizationId,
+        payload: {
+          transcriptionId: transcription.id,
+          recordingId: params.recordingId,
+          model: transcription.model,
+        },
+      });
 
       return transcription;
     },

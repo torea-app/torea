@@ -1,4 +1,4 @@
-import { viewEvent } from "@screenbase/db/schema";
+import { recording, viewEvent } from "@torea/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -33,6 +33,43 @@ export function createViewEventRepository(d1: D1Database) {
         .where(eq(viewEvent.recordingId, recordingId))
         .all();
       const row = rows[0];
+      return {
+        totalViews: row?.totalViews ?? 0,
+        uniqueViewers: row?.uniqueViewers ?? 0,
+      };
+    },
+
+    /**
+     * 組織配下の全録画に対する視聴イベントを集計する（ダッシュボード概要用）。
+     *
+     * `view_event` には `organizationId` が無いため、`recording` と INNER JOIN して
+     * `recording.organization_id` で必ず絞り込む（組織スコープの担保）。
+     *
+     * - `totalViews` は期間内イベント総数
+     * - `uniqueViewers` は `coalesce(viewer_user_id, visitor_id)` の DISTINCT COUNT
+     *   （getStats と同じロジック。両方 null のレコードは DISTINCT の対象から外れる）
+     */
+    async aggregateByOrganization(params: {
+      organizationId: string;
+      since?: Date;
+    }): Promise<{ totalViews: number; uniqueViewers: number }> {
+      const whereCond = params.since
+        ? and(
+            eq(recording.organizationId, params.organizationId),
+            gte(viewEvent.createdAt, params.since),
+          )
+        : eq(recording.organizationId, params.organizationId);
+
+      const [row] = await db
+        .select({
+          totalViews: sql<number>`count(*)`,
+          uniqueViewers: sql<number>`count(distinct coalesce(${viewEvent.viewerUserId}, ${viewEvent.visitorId}))`,
+        })
+        .from(viewEvent)
+        .innerJoin(recording, eq(viewEvent.recordingId, recording.id))
+        .where(whereCond)
+        .all();
+
       return {
         totalViews: row?.totalViews ?? 0,
         uniqueViewers: row?.uniqueViewers ?? 0,

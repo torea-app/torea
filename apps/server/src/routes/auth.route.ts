@@ -1,4 +1,4 @@
-import { auth } from "@screenbase/auth";
+import { auth } from "@torea/auth";
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 

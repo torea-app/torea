@@ -47,7 +47,7 @@ function RecordingIndicator({
           height: "10px",
           borderRadius: "50%",
           backgroundColor: "#ef4444",
-          animation: "screenbase-blink 1.5s ease-in-out infinite",
+          animation: "torea-blink 1.5s ease-in-out infinite",
         }}
       />
 
@@ -102,7 +102,7 @@ function RecordingIndicator({
       {/* 点滅アニメーション */}
       <style>
         {`
-          @keyframes screenbase-blink {
+          @keyframes torea-blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
           }
@@ -132,7 +132,7 @@ export default defineContentScript({
       removeUi();
 
       const created = await createShadowRootUi(ctx, {
-        name: "screenbase-recording-indicator",
+        name: "torea-recording-indicator",
         position: "overlay",
         zIndex: 2147483646,
         // ページのキーボード/ポインターイベントが録画インジケーターに干渉しないよう分離する

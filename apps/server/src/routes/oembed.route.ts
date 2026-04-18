@@ -66,7 +66,7 @@ export const oembedRoute = new Hono<AppEnv>().get(
       version: "1.0",
       type: "video",
       title: recording.title,
-      provider_name: "ScreenBase",
+      provider_name: "Torea",
       provider_url: originUrl.origin,
       width,
       height,

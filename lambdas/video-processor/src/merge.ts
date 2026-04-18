@@ -4,7 +4,7 @@ import type { ChunkResult, GroqSegment, Segment } from "./types.js";
  * ハルシネーション検出。
  * 無音区間の誤認識、低信頼度セグメント、テキストの繰り返しを検出する。
  */
-export function isHallucination(seg: GroqSegment): boolean {
+function isHallucination(seg: GroqSegment): boolean {
   if (seg.no_speech_prob > 0.6) return true;
   if (seg.avg_logprob < -1.0) return true;
   if (seg.compression_ratio > 2.4) return true;

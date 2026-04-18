@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,7 +8,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@screenbase/ui/components/ui/card";
+} from "@torea/ui/components/ui/card";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";

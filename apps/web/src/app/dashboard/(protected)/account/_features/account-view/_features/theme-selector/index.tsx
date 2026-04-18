@@ -3,7 +3,7 @@
 import {
   RadioGroup,
   RadioGroupItem,
-} from "@screenbase/ui/components/ui/radio-group";
+} from "@torea/ui/components/ui/radio-group";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useId, useState } from "react";

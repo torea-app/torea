@@ -13,7 +13,7 @@ export default function ShareLayout({
           href="/"
           className="font-semibold text-foreground text-sm transition-colors hover:text-foreground/80"
         >
-          Screenbase
+          Torea
         </Link>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>

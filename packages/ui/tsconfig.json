@@ -1,10 +1,10 @@
 {
-  "extends": "@screenbase/config/tsconfig.base.json",
+  "extends": "@torea/config/tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
-      "@screenbase/ui/*": ["./src/*"]
+      "@torea/ui/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],

@@ -1,6 +1,6 @@
-import { db } from "@screenbase/db";
-import * as schema from "@screenbase/db/schema/auth";
-import { env } from "@screenbase/env/server";
+import { db } from "@torea/db";
+import * as schema from "@torea/db/schema/auth";
+import { env } from "@torea/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
@@ -93,7 +93,7 @@ export const auth = betterAuth({
       const { error } = await resend.emails.send({
         from: env.FROM_EMAIL,
         to: [user.email],
-        subject: "メールアドレスの確認 - ScreenBase",
+        subject: "メールアドレスの確認 - Torea",
         html: verificationEmailHtml(user.name, verifyUrl),
       });
       if (error) {
@@ -124,7 +124,7 @@ export const auth = betterAuth({
       const { data, error } = await resend.emails.send({
         from: env.FROM_EMAIL,
         to: [user.email],
-        subject: "アカウント登録について - ScreenBase",
+        subject: "アカウント登録について - Torea",
         html: existingUserSignUpEmailHtml(user.name, loginUrl),
       });
       if (error) {
@@ -145,7 +145,7 @@ export const auth = betterAuth({
       const { error } = await resend.emails.send({
         from: env.FROM_EMAIL,
         to: [user.email],
-        subject: "パスワードのリセット - ScreenBase",
+        subject: "パスワードのリセット - Torea",
         html: resetPasswordEmailHtml(user.name, resetUrl),
       });
       if (error) {

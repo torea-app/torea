@@ -1,6 +1,6 @@
 "use client";
 
-import { env } from "@screenbase/env/web";
+import { env } from "@torea/env/web";
 import { LockIcon } from "lucide-react";
 import { useState } from "react";
 import type { EmbedMetadata } from "../_lib/types";

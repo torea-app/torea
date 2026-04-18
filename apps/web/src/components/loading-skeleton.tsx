@@ -1,4 +1,4 @@
-import { Skeleton } from "@screenbase/ui/components/ui/skeleton";
+import { Skeleton } from "@torea/ui/components/ui/skeleton";
 
 export function LoadingSkeleton() {
   return (

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const oembedQuerySchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   format: z.enum(["json"]).optional().default("json"),
   maxwidth: z
     .string()

@@ -3,7 +3,7 @@
 import {
   inviteMemberSchema,
   updateMemberRoleSchema,
-} from "@screenbase/shared/schemas";
+} from "@torea/shared/schemas";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { serverAuthClient, serverFetchOptions } from "@/lib/auth-server-client";

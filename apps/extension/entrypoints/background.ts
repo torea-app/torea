@@ -126,10 +126,7 @@ async function ensureMicrophonePermission(tabId: number): Promise<boolean> {
     } satisfies ExtensionMessage);
     return (response as { granted?: boolean })?.granted ?? false;
   } catch (e) {
-    console.error(
-      "[ScreenBase] ensureMicrophonePermission: sendMessage failed",
-      e,
-    );
+    console.error("[Torea] ensureMicrophonePermission: sendMessage failed", e);
     return false;
   }
 }
@@ -187,7 +184,7 @@ async function handleStartRecording(
   try {
     await ensureOffscreenDocument();
   } catch (e) {
-    console.error("[ScreenBase] Step3: offscreen creation failed", e);
+    console.error("[Torea] Step3: offscreen creation failed", e);
     throw new Error(ERROR_MESSAGES.OFFSCREEN_CREATION_FAILED);
   }
 
@@ -244,7 +241,7 @@ async function handleStartRecording(
       targetTabId: tabId,
     });
   } catch (e) {
-    console.error("[ScreenBase] Step8: tabCapture.getMediaStreamId failed", e);
+    console.error("[Torea] Step8: tabCapture.getMediaStreamId failed", e);
     await recordingApi.abort(recordingId).catch(() => {});
     await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
     await closeOffscreenDocument();
@@ -262,7 +259,7 @@ async function handleStartRecording(
       quality,
     } satisfies ExtensionMessage);
   } catch (e) {
-    console.error("[ScreenBase] Step9: sendMessage to offscreen failed", e);
+    console.error("[Torea] Step9: sendMessage to offscreen failed", e);
     await recordingApi.abort(recordingId).catch(() => {});
     await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
     throw new Error(ERROR_MESSAGES.RECORDING_START_FAILED);
@@ -270,7 +267,7 @@ async function handleStartRecording(
 
   if (!offscreenResponse?.success) {
     console.error(
-      "[ScreenBase] Step9: offscreen returned failure",
+      "[Torea] Step9: offscreen returned failure",
       offscreenResponse?.error,
     );
     await recordingApi.abort(recordingId).catch(() => {});
@@ -327,7 +324,7 @@ async function ensureContentScriptsInjected(tabId: number): Promise<void> {
   } catch (e) {
     // chrome://, edge://, about: など注入不可のページではエラーになる
     console.warn(
-      "[ScreenBase] Content script injection failed (restricted page?)",
+      "[Torea] Content script injection failed (restricted page?)",
       e,
     );
     throw new Error("Content script not available");

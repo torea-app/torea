@@ -1,6 +1,6 @@
 "use client";
 
-import { env } from "@screenbase/env/web";
+import { env } from "@torea/env/web";
 import { useEffect, useRef } from "react";
 
 type Props = {

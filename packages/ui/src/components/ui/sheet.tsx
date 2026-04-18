@@ -3,8 +3,8 @@
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
-import { cn } from "@screenbase/ui/lib/utils"
-import { Button } from "@screenbase/ui/components/ui/button"
+import { cn } from "@torea/ui/lib/utils"
+import { Button } from "@torea/ui/components/ui/button"
 import { XIcon } from "lucide-react"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {

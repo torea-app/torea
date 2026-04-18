@@ -8,21 +8,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@screenbase/ui/components/ui/alert-dialog";
+} from "@torea/ui/components/ui/alert-dialog";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@screenbase/ui/components/ui/avatar";
-import { Badge } from "@screenbase/ui/components/ui/badge";
-import { Button } from "@screenbase/ui/components/ui/button";
+} from "@torea/ui/components/ui/avatar";
+import { Badge } from "@torea/ui/components/ui/badge";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@screenbase/ui/components/ui/select";
+} from "@torea/ui/components/ui/select";
 import { Trash2Icon } from "lucide-react";
 
 type Member = {

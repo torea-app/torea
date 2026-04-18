@@ -1,4 +1,4 @@
-import { member, organization } from "@screenbase/db/schema";
+import { member, organization } from "@torea/db/schema";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 

@@ -51,14 +51,14 @@ function isRecordableUrl(url: string | null | undefined): boolean {
 // shadcn コンポーネント
 // =============================================
 
-import { Button } from "@screenbase/ui/components/ui/button";
-import { Label } from "@screenbase/ui/components/ui/label";
+import { Button } from "@torea/ui/components/ui/button";
+import { Label } from "@torea/ui/components/ui/label";
 import {
   RadioGroup,
   RadioGroupItem,
-} from "@screenbase/ui/components/ui/radio-group";
-import { Separator } from "@screenbase/ui/components/ui/separator";
-import { Switch } from "@screenbase/ui/components/ui/switch";
+} from "@torea/ui/components/ui/radio-group";
+import { Separator } from "@torea/ui/components/ui/separator";
+import { Switch } from "@torea/ui/components/ui/switch";
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
@@ -157,7 +157,7 @@ function LoginView() {
   return (
     <div className="space-y-3">
       <div>
-        <h1 className="font-bold text-base">ScreenBase</h1>
+        <h1 className="font-bold text-base">Torea</h1>
         <p className="mt-1 text-muted-foreground text-xs">
           ログインして利用を開始してください。
         </p>
@@ -478,7 +478,7 @@ export default function App() {
     try {
       await authClient.signOut();
     } catch (error) {
-      console.error("[ScreenBase] logout failed:", error);
+      console.error("[Torea] logout failed:", error);
     }
   }, []);
 
@@ -517,7 +517,7 @@ export default function App() {
     <div className="w-80 bg-background p-4 text-foreground">
       {/* ヘッダー */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-bold text-base">ScreenBase</h1>
+        <h1 className="font-bold text-base">Torea</h1>
         <div className="flex items-center gap-1">
           {/* ダッシュボードリンク（UX-2） */}
           <Button

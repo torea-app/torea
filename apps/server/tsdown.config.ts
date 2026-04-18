@@ -5,6 +5,6 @@ export default defineConfig({
   format: "esm",
   outDir: "./dist",
   clean: true,
-  noExternal: [/@screenbase\/.*/],
+  noExternal: [/@torea\/.*/],
   external: ["cloudflare:workers"],
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { env } from "@screenbase/env/web";
+import { env } from "@torea/env/web";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,10 +11,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@screenbase/ui/components/ui/alert-dialog";
-import { Badge } from "@screenbase/ui/components/ui/badge";
-import { Button, buttonVariants } from "@screenbase/ui/components/ui/button";
-import { Separator } from "@screenbase/ui/components/ui/separator";
+} from "@torea/ui/components/ui/alert-dialog";
+import { Badge } from "@torea/ui/components/ui/badge";
+import { Button, buttonVariants } from "@torea/ui/components/ui/button";
+import { Separator } from "@torea/ui/components/ui/separator";
 import { DownloadIcon, EyeIcon, Trash2Icon, UsersIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";

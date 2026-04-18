@@ -1,5 +1,5 @@
 {
-  "name": "@screenbase/server",
+  "name": "@torea/server",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -22,9 +22,10 @@
   "dependencies": {
     "@hono/zod-validator": "catalog:",
     "@paralleldrive/cuid2": "^3.3.0",
-    "@screenbase/auth": "workspace:*",
-    "@screenbase/db": "workspace:*",
-    "@screenbase/env": "workspace:*",
+    "@torea/auth": "workspace:*",
+    "@torea/db": "workspace:*",
+    "@torea/env": "workspace:*",
+    "@torea/shared": "workspace:*",
     "aws4fetch": "^1.0.20",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
@@ -34,7 +35,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
-    "@screenbase/config": "workspace:*",
+    "@torea/config": "workspace:*",
     "@types/node": "^22.13.14",
     "alchemy": "catalog:",
     "tsdown": "^0.16.5",

@@ -1,4 +1,4 @@
-import { auth } from "@screenbase/auth";
+import { auth } from "@torea/auth";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../types";
 

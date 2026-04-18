@@ -27,7 +27,7 @@ export function verificationEmailHtml(userName: string, url: string): string {
     <div style="padding:32px 24px;">
       <h2 style="margin:0 0 24px;font-size:20px;color:#18181b;">メールアドレスの確認</h2>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">${safeName} 様</p>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">ScreenBase へのご登録ありがとうございます。</p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">Torea へのご登録ありがとうございます。</p>
       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3f3f46;">以下のボタンをクリックして、メールアドレスの確認を完了してください。</p>
       <p style="text-align:center;margin:32px 0;">
         <a href="${safeUrl}" style="display:inline-block;padding:12px 32px;background-color:#18181b;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:15px;">

@@ -1,12 +1,12 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@screenbase/ui/components/ui/card";
+} from "@torea/ui/components/ui/card";
 import { CheckCircle2Icon, Loader2Icon, XCircleIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";

@@ -9,7 +9,7 @@ import type { ExtensionMessage } from "../types/message";
  * 結果を Background に返す。
  */
 
-const IFRAME_ID = "screenbase-mic-permission-iframe";
+const IFRAME_ID = "torea-mic-permission-iframe";
 const PERMISSION_TIMEOUT_MS = 30_000;
 
 export default defineContentScript({

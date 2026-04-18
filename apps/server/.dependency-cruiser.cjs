@@ -122,11 +122,11 @@ module.exports = {
     {
       name: "use-cases-no-direct-db",
       comment:
-        "use-cases/ は drizzle-orm / @screenbase/db を直接 import してはならない。DB 操作は repository 経由で行う。",
+        "use-cases/ は drizzle-orm / @torea/db を直接 import してはならない。DB 操作は repository 経由で行う。",
       severity: "error",
       from: { path: "^src/use-cases/" },
       to: {
-        path: ["drizzle-orm", "@screenbase/db"],
+        path: ["drizzle-orm", "@torea/db"],
       },
     },
 
@@ -148,19 +148,19 @@ module.exports = {
       },
     },
 
-    // @screenbase/shared/schemas（Zod バリデーションスキーマ）は routes/ でのみ使用可能。
+    // @torea/shared/schemas（Zod バリデーションスキーマ）は routes/ でのみ使用可能。
     // use-cases/infrastructure/domain/cron にバリデーションロジックが漏洩するのを防ぐ。
-    // 日付ユーティリティ（@screenbase/shared/date 等）は各レイヤーで使用可能。
+    // 日付ユーティリティ（@torea/shared/date 等）は各レイヤーで使用可能。
     {
       name: "shared-schemas-only-in-routes",
       comment:
-        "@screenbase/shared/schemas は routes/ でのみ使用可能。" +
+        "@torea/shared/schemas は routes/ でのみ使用可能。" +
         "バリデーションスキーマを presentation 層に閉じ込める。",
       severity: "error",
       from: {
         path: "^src/(domain|infrastructure|use-cases|middleware|cron)/",
       },
-      to: { path: "@screenbase/shared/schemas" },
+      to: { path: "@torea/shared/schemas" },
     },
 
     // hono / @hono/* は presentation 層（routes/middleware）と Composition Root（src/ 直下）でのみ使用可能。
@@ -175,7 +175,7 @@ module.exports = {
       to: { path: ["^hono", "^@hono/"] },
     },
 
-    // @screenbase/auth は middleware/（認証・RBAC）と routes/auth.route.ts でのみ使用可能。
+    // @torea/auth は middleware/（認証・RBAC）と routes/auth.route.ts でのみ使用可能。
     // use-cases/infrastructure/domain/cron から直接 import すると認証ロジックが散在する。
     // ルールを2つに分割:
     //   1. use-cases/infrastructure/domain/cron からの import を全面禁止
@@ -183,50 +183,50 @@ module.exports = {
     {
       name: "auth-not-from-inner-layers",
       comment:
-        "@screenbase/auth は use-cases/infrastructure/domain/cron から import してはならない。",
+        "@torea/auth は use-cases/infrastructure/domain/cron から import してはならない。",
       severity: "error",
       from: { path: "^src/(use-cases|infrastructure|domain|cron)/" },
-      to: { path: "@screenbase/auth" },
+      to: { path: "@torea/auth" },
     },
     {
       name: "auth-not-from-routes-except-auth-route",
       comment:
-        "@screenbase/auth は routes/ 内では auth.route.ts のみ使用可能。" +
+        "@torea/auth は routes/ 内では auth.route.ts のみ使用可能。" +
         "他の route ファイルからの直接 import を禁止。",
       severity: "error",
       from: {
         path: "^src/routes/",
         pathNot: "^src/routes/auth\\.route\\.ts$",
       },
-      to: { path: "@screenbase/auth" },
+      to: { path: "@torea/auth" },
     },
 
-    // @screenbase/env は src/ 直下（Composition Root: app.ts）でのみ使用可能。
+    // @torea/env は src/ 直下（Composition Root: app.ts）でのみ使用可能。
     // 各レイヤーで env を直接読むと設定の管理が散在する。
     // 環境変数は Hono の c.env（Bindings）経由で DI する設計。
     {
       name: "env-only-in-composition-root",
       comment:
-        "@screenbase/env は src/ 直下（Composition Root）でのみ使用可能。" +
+        "@torea/env は src/ 直下（Composition Root）でのみ使用可能。" +
         "各レイヤーは c.env（Bindings）経由で環境変数を受け取ること。",
       severity: "error",
       from: {
         path: "^src/(domain|infrastructure|use-cases|middleware|routes|cron)/",
       },
-      to: { path: "@screenbase/env" },
+      to: { path: "@torea/env" },
     },
 
     // Routes / Middleware / Cron は drizzle(c.env.DB) でリポジトリを生成するため drizzle-orm/d1 を使用する。これは DI パターンの一部であり許容する。
-    // ただし @screenbase/db/schema の直接使用（= クエリの直書き）は禁止。
+    // ただし @torea/db/schema の直接使用（= クエリの直書き）は禁止。
     // DB クエリは必ず repository 経由で行う。
     {
       name: "presentation-and-cron-no-direct-db",
       comment:
-        "routes/middleware/cron は @screenbase/db を直接 import してはならない。DB クエリは repository 経由で行う。",
+        "routes/middleware/cron は @torea/db を直接 import してはならない。DB クエリは repository 経由で行う。",
       severity: "error",
       from: { path: "^src/(routes|middleware|cron)/" },
       to: {
-        path: "@screenbase/db",
+        path: "@torea/db",
       },
     },
 

@@ -1,5 +1,5 @@
 {
-  "name": "@screenbase/db",
+  "name": "@torea/db",
   "type": "module",
   "exports": {
     ".": {
@@ -21,14 +21,14 @@
   },
   "dependencies": {
     "@libsql/client": "catalog:",
-    "@screenbase/env": "workspace:*",
+    "@torea/env": "workspace:*",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
     "libsql": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@screenbase/config": "workspace:*",
+    "@torea/config": "workspace:*",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5"
   }

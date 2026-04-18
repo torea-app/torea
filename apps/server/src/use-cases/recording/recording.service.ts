@@ -6,6 +6,7 @@ import type {
   RecordingStatus,
   UploadedPart,
 } from "../../domain/types/recording";
+import type { WebhookEventEnvelope } from "../../domain/types/webhook-events";
 import type { createRecordingRepository } from "../../infrastructure/repositories/recording.repository";
 
 /** R2StorageClient のうち、このサービスが必要とするメソッドのみを定義 */
@@ -40,6 +41,11 @@ type Deps = {
   generateId: () => string;
   queue?: QueueClient;
   skipVideoProcessing?: boolean;
+  /**
+   * Webhook イベント発火用コールバック (optional)。
+   * 未指定の場合は emit しない (現在のテスト / バックグラウンド処理で注入しないケース用)。
+   */
+  onEvent?: (envelope: WebhookEventEnvelope) => Promise<void>;
 };
 
 export function createRecordingService({
@@ -48,7 +54,17 @@ export function createRecordingService({
   generateId,
   queue,
   skipVideoProcessing,
+  onEvent,
 }: Deps) {
+  async function emitSafe(envelope: WebhookEventEnvelope): Promise<void> {
+    if (!onEvent) return;
+    try {
+      await onEvent(envelope);
+    } catch (err) {
+      // Webhook emit 失敗はメイン処理の結果に影響させない
+      console.error("Webhook emit failed", err);
+    }
+  }
   return {
     /**
      * 録画セッションを開始する。
@@ -80,6 +96,20 @@ export function createRecordingService({
         r2Key,
         uploadId,
         mimeType: params.mimeType,
+      });
+
+      await emitSafe({
+        id: generateId(),
+        name: "recording.created",
+        version: "v1",
+        createdAt: new Date().toISOString(),
+        organizationId: recording.organizationId,
+        payload: {
+          recordingId: recording.id,
+          userId: recording.userId,
+          title: recording.title,
+          createdAt: recording.createdAt.toISOString(),
+        },
       });
 
       return { recording, uploadId };
@@ -226,6 +256,7 @@ export function createRecordingService({
     async deleteRecording(params: {
       recordingId: string;
       organizationId: string;
+      deletedByUserId: string;
     }) {
       const rec = await repo.findById(
         params.recordingId,
@@ -250,6 +281,18 @@ export function createRecordingService({
       }
 
       await repo.delete(rec.id, params.organizationId);
+
+      await emitSafe({
+        id: generateId(),
+        name: "recording.deleted",
+        version: "v1",
+        createdAt: new Date().toISOString(),
+        organizationId: rec.organizationId,
+        payload: {
+          recordingId: rec.id,
+          deletedByUserId: params.deletedByUserId,
+        },
+      });
     },
 
     /**
@@ -259,6 +302,7 @@ export function createRecordingService({
     async deleteRecordings(params: {
       recordingIds: string[];
       organizationId: string;
+      deletedByUserId: string;
     }) {
       const records = await repo.findByIds(
         params.recordingIds,
@@ -294,6 +338,20 @@ export function createRecordingService({
         records.map((rec) => rec.id),
         params.organizationId,
       );
+
+      for (const rec of records) {
+        await emitSafe({
+          id: generateId(),
+          name: "recording.deleted",
+          version: "v1",
+          createdAt: new Date().toISOString(),
+          organizationId: rec.organizationId,
+          payload: {
+            recordingId: rec.id,
+            deletedByUserId: params.deletedByUserId,
+          },
+        });
+      }
 
       return { deletedCount };
     },

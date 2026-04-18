@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import type { AppEnv } from "../types";
 import { createTranscriptionService } from "../use-cases/transcription/transcription.service";
+import { buildWebhookEmitter } from "../webhook-emitter";
 import { transcriptionParamSchema } from "./transcription.schemas";
 
 export const transcriptionRoute = new Hono<AppEnv>()
@@ -59,11 +60,13 @@ export const transcriptionRoute = new Hono<AppEnv>()
         return c.json({ error: "Recording not found" }, 404);
       }
 
+      const emitter = buildWebhookEmitter(c.env);
       const service = createTranscriptionService({
         repo: createTranscriptionRepository(c.env.DB),
         generateId: createId,
         queue: c.env.TRANSCRIPTION_QUEUE,
         skipTranscription: c.env.SKIP_TRANSCRIPTION === "true",
+        onEvent: emitter.emit,
       });
 
       const transcription = await service.enqueue({

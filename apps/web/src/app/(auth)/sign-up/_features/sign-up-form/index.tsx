@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
-import { Input } from "@screenbase/ui/components/ui/input";
-import { Label } from "@screenbase/ui/components/ui/label";
+import { Button } from "@torea/ui/components/ui/button";
+import { Input } from "@torea/ui/components/ui/input";
+import { Label } from "@torea/ui/components/ui/label";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSignUpForm } from "./use-form";

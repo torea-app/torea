@@ -1,8 +1,8 @@
 {
-  "name": "@screenbase/extension",
+  "name": "@torea/extension",
   "version": "0.0.1",
   "private": true,
-  "description": "ScreenBase Chrome Extension",
+  "description": "Torea Chrome Extension",
   "type": "module",
   "scripts": {
     "dev": "wxt --port 5555",
@@ -12,7 +12,7 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "@screenbase/ui": "workspace:*",
+    "@torea/ui": "workspace:*",
     "better-auth": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
@@ -22,9 +22,10 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^6.0.1",
     "@wxt-dev/module-react": "^1.1.5",
     "tailwindcss": "catalog:",
     "typescript": "^5",
-    "wxt": "^0.20.21"
+    "wxt": "^0.20.24"
   }
 }

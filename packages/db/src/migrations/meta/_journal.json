@@ -50,6 +50,13 @@
       "when": 1776323332880,
       "tag": "0006_fine_moondragon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1776388293633,
+      "tag": "0007_hard_umar",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@screenbase/env",
+  "name": "@torea/env",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@screenbase/config": "workspace:*",
-    "@screenbase/infra": "workspace:*",
+    "@torea/config": "workspace:*",
+    "@torea/infra": "workspace:*",
     "@types/node": "^22.13.14",
     "typescript": "^5"
   }

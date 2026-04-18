@@ -12,11 +12,11 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@screenbase/ui/components",
-    "utils": "@screenbase/ui/lib/utils",
-    "hooks": "@screenbase/ui/hooks",
-    "lib": "@screenbase/ui/lib",
-    "ui": "@screenbase/ui/components/ui"
+    "components": "@torea/ui/components",
+    "utils": "@torea/ui/lib/utils",
+    "hooks": "@torea/ui/hooks",
+    "lib": "@torea/ui/lib",
+    "ui": "@torea/ui/components/ui"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

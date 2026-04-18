@@ -1,7 +1,7 @@
 "use client";
 
-import { buttonVariants } from "@screenbase/ui/components/ui/button";
-import { Separator } from "@screenbase/ui/components/ui/separator";
+import { buttonVariants } from "@torea/ui/components/ui/button";
+import { Separator } from "@torea/ui/components/ui/separator";
 import Link from "next/link";
 import { useRef } from "react";
 import { authClient } from "@/lib/auth-client";

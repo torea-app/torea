@@ -1,5 +1,5 @@
-import { comment, user } from "@screenbase/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { comment, recording, user } from "@torea/db/schema";
+import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 type CommentInsert = {
@@ -98,6 +98,33 @@ export function createCommentRepository(d1: D1Database) {
      */
     async delete(id: string): Promise<void> {
       await db.delete(comment).where(eq(comment.id, id));
+    },
+
+    /**
+     * 組織配下の全録画に対するコメント数を集計する（ダッシュボード概要用）。
+     *
+     * `comment` には `organizationId` が無いため、`recording` と INNER JOIN して
+     * `recording.organization_id` で必ず絞り込む（組織スコープの担保）。
+     */
+    async aggregateByOrganization(params: {
+      organizationId: string;
+      since?: Date;
+    }): Promise<{ count: number }> {
+      const whereCond = params.since
+        ? and(
+            eq(recording.organizationId, params.organizationId),
+            gte(comment.createdAt, params.since),
+          )
+        : eq(recording.organizationId, params.organizationId);
+
+      const [row] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(comment)
+        .innerJoin(recording, eq(comment.recordingId, recording.id))
+        .where(whereCond)
+        .all();
+
+      return { count: row?.count ?? 0 };
     },
   };
 }

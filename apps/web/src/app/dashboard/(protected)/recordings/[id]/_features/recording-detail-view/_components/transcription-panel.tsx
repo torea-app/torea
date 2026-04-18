@@ -1,7 +1,7 @@
 "use client";
 
-import { ScrollArea } from "@screenbase/ui/components/ui/scroll-area";
-import { Separator } from "@screenbase/ui/components/ui/separator";
+import { ScrollArea } from "@torea/ui/components/ui/scroll-area";
+import { Separator } from "@torea/ui/components/ui/separator";
 import { AlertCircleIcon, FileTextIcon, LoaderCircleIcon } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";

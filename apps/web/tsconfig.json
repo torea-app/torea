@@ -21,7 +21,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@screenbase/ui/*": ["../../packages/ui/src/*"]
+      "@torea/ui/*": ["../../packages/ui/src/*"]
     },
     "types": ["@cloudflare/workers-types"]
   },

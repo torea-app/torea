@@ -4,14 +4,14 @@
   "ignore": ["lambdas/**"],
   "workspaces": {
     ".": {
-      "ignoreDependencies": ["@screenbase/env", "dotenv", "zod"]
+      "ignoreDependencies": ["@torea/env", "dotenv", "zod"]
     },
     "apps/web": {
       "entry": ["src/app/**/*.{ts,tsx}", "src/lib/*.ts", "open-next.config.ts"],
       "project": ["src/**/*.{ts,tsx}"],
       "ignoreDependencies": [
         "@libsql/client",
-        "@screenbase/config",
+        "@torea/config",
         "dotenv",
         "libsql",
         "postcss",
@@ -47,12 +47,12 @@
     "apps/liff": {
       "entry": ["src/routes/**/*.tsx"],
       "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@screenbase/config", "tailwindcss", "hono"]
+      "ignoreDependencies": ["@torea/config", "tailwindcss", "hono"]
     },
     "packages/infra": {
       "entry": ["alchemy.run.ts"],
       "project": ["**/*.ts"],
-      "ignoreDependencies": ["zod", "@screenbase/config"]
+      "ignoreDependencies": ["zod", "@torea/config"]
     },
     "apps/extension": {
       "entry": [
@@ -68,7 +68,11 @@
         "types/**/*.ts",
         "utils/**/*.ts"
       ],
-      "ignoreDependencies": ["@wxt-dev/module-react", "tailwindcss"]
+      "ignoreDependencies": [
+        "@vitejs/plugin-react",
+        "@wxt-dev/module-react",
+        "tailwindcss"
+      ]
     }
   }
 }

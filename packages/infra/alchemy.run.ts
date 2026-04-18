@@ -28,7 +28,7 @@ if (!process.env.ALCHEMY_DEPLOY) {
 // USE_REMOTE_BINDINGS=true でローカル開発時もリモートの D1/R2/KV/Queue を使用
 const useRemoteBindings = process.env.USE_REMOTE_BINDINGS === "true";
 
-const app = await alchemy("screenbase", {
+const app = await alchemy("torea", {
   stage: process.env.ALCHEMY_STAGE ?? "dev",
   password: process.env.ALCHEMY_PASSWORD,
   // deploy/CI ではリモート state、dev ではローカルファイルシステム state
@@ -36,7 +36,7 @@ const app = await alchemy("screenbase", {
     ? {
         stateStore: (scope) =>
           new CloudflareStateStore(scope, {
-            scriptName: "screenbase-alchemy-state",
+            scriptName: "torea-alchemy-state",
             forceUpdate: true,
           }),
       }
@@ -48,27 +48,36 @@ const db = await D1Database("database", {
   ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
-const r2 = await R2Bucket("screenbase-storage", {
+const r2 = await R2Bucket("torea-storage", {
   ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
-const kv = await KVNamespace("screenbase-kv", {
+const kv = await KVNamespace("torea-kv", {
   ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
 const videoProcessingQueue = await Queue("video-processing-queue", {
-  name: "screenbase-video-processing",
+  name: "torea-video-processing",
   ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
 const transcriptionQueue = await Queue("transcription-queue", {
-  name: "screenbase-transcription",
+  name: "torea-transcription",
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
+});
+
+const webhookDeliveryQueue = await Queue("webhook-delivery-queue", {
+  name: "torea-webhook-delivery",
+  ...(useRemoteBindings ? { dev: { remote: true } } : {}),
+});
+
+const webhookSecretKv = await KVNamespace("torea-webhook-secrets", {
   ...(useRemoteBindings ? { dev: { remote: true } } : {}),
 });
 
 export const web = await Nextjs("web", {
   cwd: "../../apps/web",
-  domains: ["screenbase.dpdns.org"],
+  domains: ["torea.app"],
   bindings: {
     NEXT_PUBLIC_SERVER_URL: alchemy.env.NEXT_PUBLIC_SERVER_URL!,
     NEXT_PUBLIC_APP_URL: alchemy.env.NEXT_PUBLIC_APP_URL!,
@@ -88,7 +97,7 @@ export const server = await Worker("server", {
   cwd: "../../apps/server",
   entrypoint: "src/index.ts",
   compatibility: "node",
-  domains: ["api.screenbase.dpdns.org"],
+  domains: ["api.torea.app"],
   bindings: {
     DB: db,
     R2: r2,
@@ -101,6 +110,8 @@ export const server = await Worker("server", {
     COOKIE_DOMAIN: alchemy.env.COOKIE_DOMAIN!,
     VIDEO_PROCESSING_QUEUE: videoProcessingQueue,
     TRANSCRIPTION_QUEUE: transcriptionQueue,
+    WEBHOOK_DELIVERY_QUEUE: webhookDeliveryQueue,
+    WEBHOOK_SECRET_KV: webhookSecretKv,
     // AWS Lambda（動画変換処理）
     LAMBDA_FUNCTION_URL: alchemy.env.LAMBDA_FUNCTION_URL!,
     LAMBDA_REGION: alchemy.env.LAMBDA_REGION!,
@@ -120,7 +131,16 @@ export const server = await Worker("server", {
   eventSources: [
     { queue: videoProcessingQueue, settings: { maxRetries: 3, batchSize: 1 } },
     { queue: transcriptionQueue, settings: { maxRetries: 3, batchSize: 1 } },
+    // Webhook 配信はランナー内で DB 状態と連動した指数バックオフで再送制御するため、
+    // Queue の auto-retry は最小限 (0) にして重複配信を防止する。
+    {
+      queue: webhookDeliveryQueue,
+      settings: { maxRetries: 0, batchSize: 10 },
+    },
   ],
+  // 10 分間隔で webhook delivery のセーフティネット Cron を実行
+  // (Queue ロスト / デプロイ取りこぼしを救済)
+  crons: ["*/10 * * * *"],
   dev: {
     port: 3000,
   },

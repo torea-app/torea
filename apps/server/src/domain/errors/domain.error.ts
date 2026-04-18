@@ -40,3 +40,15 @@ export class UnauthorizedError extends DomainError {
     super(message, "UNAUTHORIZED");
   }
 }
+
+export class WebhookUrlInvalidError extends DomainError {
+  constructor(message: string) {
+    super(message, "VALIDATION_ERROR");
+  }
+}
+
+export class WebhookEventUnknownError extends DomainError {
+  constructor(eventName: string) {
+    super(`Unknown webhook event: ${eventName}`, "VALIDATION_ERROR");
+  }
+}

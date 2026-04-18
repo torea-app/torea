@@ -1,6 +1,6 @@
 "use client";
 
-import { Separator } from "@screenbase/ui/components/ui/separator";
+import { Separator } from "@torea/ui/components/ui/separator";
 import { MessageSquareIcon } from "lucide-react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { toast } from "sonner";

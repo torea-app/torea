@@ -1,5 +1,5 @@
 {
-  "name": "@screenbase/shared",
+  "name": "@torea/shared",
   "private": true,
   "exports": {
     ".": {
@@ -13,6 +13,9 @@
     },
     "./schemas/*": {
       "default": "./src/schemas/*.ts"
+    },
+    "./webhook-events": {
+      "default": "./src/webhook-events.ts"
     }
   },
   "dependencies": {
@@ -20,7 +23,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@screenbase/config": "workspace:*",
+    "@torea/config": "workspace:*",
     "typescript": "catalog:"
   }
 }

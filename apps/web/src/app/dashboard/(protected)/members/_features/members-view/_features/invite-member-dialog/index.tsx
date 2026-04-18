@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -10,16 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@screenbase/ui/components/ui/dialog";
-import { Input } from "@screenbase/ui/components/ui/input";
-import { Label } from "@screenbase/ui/components/ui/label";
+} from "@torea/ui/components/ui/dialog";
+import { Input } from "@torea/ui/components/ui/input";
+import { Label } from "@torea/ui/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@screenbase/ui/components/ui/select";
+} from "@torea/ui/components/ui/select";
 import { PlusIcon } from "lucide-react";
 import { useRef } from "react";
 import { useInviteMemberForm } from "./use-form";

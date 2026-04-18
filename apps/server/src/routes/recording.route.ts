@@ -11,6 +11,7 @@ import type { AppEnv } from "../types";
 import { createCommentService } from "../use-cases/comment/comment.service";
 import { createRecordingService } from "../use-cases/recording/recording.service";
 import { createViewAnalyticsService } from "../use-cases/view-analytics/view-analytics.service";
+import { buildWebhookEmitter } from "../webhook-emitter";
 import { createCommentSchema, updateCommentSchema } from "./comment.schemas";
 import {
   bulkDeleteRecordingsSchema,
@@ -35,10 +36,12 @@ export const recordingRoute = new Hono<AppEnv>()
       const user = c.get("user");
       const organizationId = c.get("activeOrganizationId");
 
+      const emitter = buildWebhookEmitter(c.env);
       const service = createRecordingService({
         repo: createRecordingRepository(c.env.DB),
         storage: new R2StorageClient(c.env.R2),
         generateId: createId,
+        onEvent: emitter.emit,
       });
 
       const title =
@@ -187,16 +190,20 @@ export const recordingRoute = new Hono<AppEnv>()
     async (c) => {
       const { ids } = c.req.valid("json");
       const organizationId = c.get("activeOrganizationId");
+      const user = c.get("user");
 
+      const emitter = buildWebhookEmitter(c.env);
       const service = createRecordingService({
         repo: createRecordingRepository(c.env.DB),
         storage: new R2StorageClient(c.env.R2),
         generateId: createId,
+        onEvent: emitter.emit,
       });
 
       const { deletedCount } = await service.deleteRecordings({
         recordingIds: ids,
         organizationId,
+        deletedByUserId: user.id,
       });
 
       return c.json({ deletedCount });
@@ -392,14 +399,21 @@ export const recordingRoute = new Hono<AppEnv>()
   .delete("/:id", requirePermission("captures", "delete"), async (c) => {
     const recordingId = c.req.param("id");
     const organizationId = c.get("activeOrganizationId");
+    const user = c.get("user");
 
+    const emitter = buildWebhookEmitter(c.env);
     const service = createRecordingService({
       repo: createRecordingRepository(c.env.DB),
       storage: new R2StorageClient(c.env.R2),
       generateId: createId,
+      onEvent: emitter.emit,
     });
 
-    await service.deleteRecording({ recordingId, organizationId });
+    await service.deleteRecording({
+      recordingId,
+      organizationId,
+      deletedByUserId: user.id,
+    });
 
     return c.body(null, 204);
   })

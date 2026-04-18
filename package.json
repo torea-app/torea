@@ -1,5 +1,5 @@
 {
-  "name": "screenbase",
+  "name": "torea",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -12,26 +12,26 @@
     "check-types": "turbo check-types",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
-    "db:push": "turbo -F @screenbase/db db:push",
-    "db:generate": "turbo -F @screenbase/db db:generate",
-    "deploy": "turbo -F @screenbase/infra deploy",
-    "destroy": "turbo -F @screenbase/infra destroy",
+    "db:push": "turbo -F @torea/db db:push",
+    "db:generate": "turbo -F @torea/db db:generate",
+    "deploy": "turbo -F @torea/infra deploy",
+    "destroy": "turbo -F @torea/infra destroy",
     "db:seed": "curl -s -X POST http://localhost:3000/api/seed | node -e \"process.stdin.on('data',d=>{const r=JSON.parse(d);console.log(r.success?'✅ Seed complete: '+JSON.stringify(r.summary,null,2)+'\\n\\nLogin: '+r.credentials.email+' / '+r.credentials.password:'❌ '+JSON.stringify(r))})\"",
-    "db:reset": "rm -rf .alchemy/miniflare/v3/d1 && rm -f packages/infra/.alchemy/screenbase/dev/database.json",
+    "db:reset": "rm -rf .alchemy/miniflare/v3/d1 && rm -f packages/infra/.alchemy/torea/dev/database.json",
     "db:auth:generate": "npx auth@latest generate --config packages/auth/src/index.ts --output packages/db/src/schema/auth.ts -y",
     "check": "biome check --write .",
     "knip": "knip",
-    "depcruise": "pnpm -F @screenbase/server depcruise"
+    "depcruise": "pnpm -F @torea/server depcruise"
   },
   "dependencies": {
-    "@screenbase/env": "workspace:*",
+    "@torea/env": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",
     "@cloudflare/workers-types": "catalog:",
-    "@screenbase/config": "workspace:*",
+    "@torea/config": "workspace:*",
     "@types/node": "^22.13.14",
     "dependency-cruiser": "^17.3.10",
     "knip": "^6.0.5",

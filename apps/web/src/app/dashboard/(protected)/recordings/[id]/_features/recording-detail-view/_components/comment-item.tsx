@@ -4,15 +4,15 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@screenbase/ui/components/ui/avatar";
-import { Button } from "@screenbase/ui/components/ui/button";
+} from "@torea/ui/components/ui/avatar";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@screenbase/ui/components/ui/dropdown-menu";
-import { Textarea } from "@screenbase/ui/components/ui/textarea";
+} from "@torea/ui/components/ui/dropdown-menu";
+import { Textarea } from "@torea/ui/components/ui/textarea";
 import {
   MoreHorizontalIcon,
   PencilIcon,

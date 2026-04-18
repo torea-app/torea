@@ -8,7 +8,7 @@ catalog:
   '@libsql/client': 0.15.15
   '@types/react': ^19.2.10
   '@types/react-dom': ^19.2.3
-  alchemy: ^0.87.0
+  alchemy: ^0.91.2
   better-auth: 1.5.5
   dayjs: ^1.11.20
   dotenv: ^17.2.2

@@ -2,7 +2,7 @@
 
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress"
 
-import { cn } from "@screenbase/ui/lib/utils"
+import { cn } from "@torea/ui/lib/utils"
 
 function Progress({
   className,

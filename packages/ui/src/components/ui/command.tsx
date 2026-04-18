@@ -3,18 +3,18 @@
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 
-import { cn } from "@screenbase/ui/lib/utils"
+import { cn } from "@torea/ui/lib/utils"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@screenbase/ui/components/ui/dialog"
+} from "@torea/ui/components/ui/dialog"
 import {
   InputGroup,
   InputGroupAddon,
-} from "@screenbase/ui/components/ui/input-group"
+} from "@torea/ui/components/ui/input-group"
 import { SearchIcon, CheckIcon } from "lucide-react"
 
 function Command({

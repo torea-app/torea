@@ -1,25 +1,25 @@
 "use client";
 
-import { Button } from "@screenbase/ui/components/ui/button";
+import { Button } from "@torea/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@screenbase/ui/components/ui/dialog";
-import { Input } from "@screenbase/ui/components/ui/input";
-import { Label } from "@screenbase/ui/components/ui/label";
+} from "@torea/ui/components/ui/dialog";
+import { Input } from "@torea/ui/components/ui/input";
+import { Label } from "@torea/ui/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@screenbase/ui/components/ui/popover";
+} from "@torea/ui/components/ui/popover";
 import {
   RadioGroup,
   RadioGroupItem,
-} from "@screenbase/ui/components/ui/radio-group";
-import { Separator } from "@screenbase/ui/components/ui/separator";
+} from "@torea/ui/components/ui/radio-group";
+import { Separator } from "@torea/ui/components/ui/separator";
 import {
   CheckIcon,
   CodeIcon,
@@ -59,7 +59,7 @@ export function ShareDialog({ recordingId }: Props) {
         return;
       }
       const data = await res.json();
-      setShareLinks(data.shareLinks as ShareLink[]);
+      setShareLinks(data.shareLinks);
     } finally {
       setIsLoading(false);
     }

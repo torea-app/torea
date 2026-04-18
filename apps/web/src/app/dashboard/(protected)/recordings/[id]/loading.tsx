@@ -1,4 +1,4 @@
-import { Skeleton } from "@screenbase/ui/components/ui/skeleton";
+import { Skeleton } from "@torea/ui/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 
 export default function RecordingDetailLoading() {

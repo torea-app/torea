@@ -8,9 +8,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@screenbase/ui/components/ui/alert-dialog";
-import { Badge } from "@screenbase/ui/components/ui/badge";
-import { Button } from "@screenbase/ui/components/ui/button";
+} from "@torea/ui/components/ui/alert-dialog";
+import { Badge } from "@torea/ui/components/ui/badge";
+import { Button } from "@torea/ui/components/ui/button";
 import { XIcon } from "lucide-react";
 
 export function InvitationCard({

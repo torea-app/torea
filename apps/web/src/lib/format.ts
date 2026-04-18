@@ -1,4 +1,4 @@
-import { FORMAT, jst } from "@screenbase/shared/date";
+import { FORMAT, jst } from "@torea/shared/date";
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("ja-JP", {

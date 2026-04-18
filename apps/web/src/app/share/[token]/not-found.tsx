@@ -1,4 +1,4 @@
-import { buttonVariants } from "@screenbase/ui/components/ui/button";
+import { buttonVariants } from "@torea/ui/components/ui/button";
 import Link from "next/link";
 
 export default function ShareNotFound() {

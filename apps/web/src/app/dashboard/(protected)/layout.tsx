@@ -1,7 +1,4 @@
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@screenbase/ui/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@torea/ui/components/ui/sidebar";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";

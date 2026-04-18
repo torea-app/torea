@@ -1,4 +1,4 @@
-import { env } from "@screenbase/env/web";
+import { env } from "@torea/env/web";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { OrgMembersView } from "./_components/org-members-view";
@@ -33,11 +33,11 @@ export async function generateMetadata({
   const thumbnailUrl = `${env.NEXT_PUBLIC_SERVER_URL}/api/share/${encodeURIComponent(token)}/thumbnail`;
 
   return {
-    title: `${metadata.recordingTitle} | ScreenBase`,
+    title: `${metadata.recordingTitle} | Torea`,
     openGraph: {
       title: metadata.recordingTitle,
       type: "video.other",
-      siteName: "ScreenBase",
+      siteName: "Torea",
       images: [
         {
           url: thumbnailUrl,

@@ -1,5 +1,5 @@
-import { ac, admin, member, owner } from "@screenbase/auth/permissions";
-import { env } from "@screenbase/env/web";
+import { ac, admin, member, owner } from "@torea/auth/permissions";
+import { env } from "@torea/env/web";
 import { createAuthClient } from "better-auth/client";
 import { organizationClient } from "better-auth/client/plugins";
 import { headers } from "next/headers";
@@ -10,7 +10,7 @@ import { headers } from "next/headers";
  * Unlike the React client (`auth-client.ts`), this uses `better-auth/client`
  * (no React hooks) and is safe to use in server-side code.
  * It communicates with the auth server via HTTP, avoiding direct import of
- * `@screenbase/auth` which depends on `cloudflare:workers`.
+ * `@torea/auth` which depends on `cloudflare:workers`.
  */
 export const serverAuthClient = createAuthClient({
   baseURL: env.NEXT_PUBLIC_SERVER_URL,

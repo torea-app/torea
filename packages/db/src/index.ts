@@ -1,4 +1,4 @@
-import { env } from "@screenbase/env/server";
+import { env } from "@torea/env/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import * as schema from "./schema";

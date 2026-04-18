@@ -61,7 +61,7 @@ function CountdownOverlay({
           color: "#ffffff",
           lineHeight: 1,
           textShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
-          animation: "screenbase-pulse 1s ease-in-out infinite",
+          animation: "torea-pulse 1s ease-in-out infinite",
         }}
       >
         {count}
@@ -106,7 +106,7 @@ function CountdownOverlay({
       {/* パルスアニメーション */}
       <style>
         {`
-          @keyframes screenbase-pulse {
+          @keyframes torea-pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.05); opacity: 0.9; }
           }
@@ -138,7 +138,7 @@ export default defineContentScript({
         removeUi();
 
         createShadowRootUi(ctx, {
-          name: "screenbase-countdown",
+          name: "torea-countdown",
           position: "overlay",
           zIndex: 2147483647,
           isolateEvents: true,

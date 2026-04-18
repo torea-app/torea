@@ -1,6 +1,6 @@
 "use client";
 
-import { Separator } from "@screenbase/ui/components/ui/separator";
+import { Separator } from "@torea/ui/components/ui/separator";
 import { useAuth } from "@/components/auth-provider";
 import { PasswordForm } from "./_features/password-form";
 import { ProfileForm } from "./_features/profile-form";

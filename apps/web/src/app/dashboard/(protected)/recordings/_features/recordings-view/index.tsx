@@ -9,16 +9,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@screenbase/ui/components/ui/alert-dialog";
-import { Button } from "@screenbase/ui/components/ui/button";
-import { Checkbox } from "@screenbase/ui/components/ui/checkbox";
+} from "@torea/ui/components/ui/alert-dialog";
+import { Button } from "@torea/ui/components/ui/button";
+import { Checkbox } from "@torea/ui/components/ui/checkbox";
 import {
   Table,
   TableBody,
   TableHead,
   TableHeader,
   TableRow,
-} from "@screenbase/ui/components/ui/table";
+} from "@torea/ui/components/ui/table";
 import { ChevronLeftIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useRef, useState, useTransition } from "react";

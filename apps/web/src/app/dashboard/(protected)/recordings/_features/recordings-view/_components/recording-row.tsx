@@ -9,17 +9,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@screenbase/ui/components/ui/alert-dialog";
-import { Badge } from "@screenbase/ui/components/ui/badge";
-import { Button } from "@screenbase/ui/components/ui/button";
-import { Checkbox } from "@screenbase/ui/components/ui/checkbox";
+} from "@torea/ui/components/ui/alert-dialog";
+import { Badge } from "@torea/ui/components/ui/badge";
+import { Button } from "@torea/ui/components/ui/button";
+import { Checkbox } from "@torea/ui/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@screenbase/ui/components/ui/dropdown-menu";
-import { TableCell, TableRow } from "@screenbase/ui/components/ui/table";
+} from "@torea/ui/components/ui/dropdown-menu";
+import { TableCell, TableRow } from "@torea/ui/components/ui/table";
 import { MoreHorizontalIcon, PlayIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";

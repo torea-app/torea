@@ -59,10 +59,9 @@ packages/
   infra/           Alchemy インフラ定義（alchemy.run.ts）
   shared/          Zod スキーマ・日付ユーティリティ
   ui/              共有 UI コンポーネント（shadcn/ui ベース）
-
-lambdas/
-  video-processor/ AWS Lambda — fMP4→Progressive MP4 変換（ffmpeg, Hono, S3 SDK）
 ```
+
+> 動画変換 Lambda は別リポジトリ [`torea-lambda`](../torea-lambda) に分離されている。
 
 ## 録画〜変換フロー
 
@@ -97,9 +96,4 @@ sequenceDiagram
 
 ## Lambda Video Processor
 
-`lambdas/video-processor/` — R2 上の fMP4 を Progressive MP4 に remux する AWS Lambda 関数。
-
-- **ランタイム**: Node.js 24 Alpine + ffmpeg + AWS Lambda Web Adapter
-- **エンドポイント**: `POST /process` — `{ r2Key }` を受け取り、R2 からダウンロード → `ffmpeg -c copy -movflags +faststart` → R2 へ上書きアップロード
-- **デプロイ**: Docker イメージを ECR にプッシュし Lambda にデプロイ
-- **トリガー**: Cloudflare Queue → Server の queue consumer が Lambda Function URL を呼び出し
+動画変換・文字起こしを行う AWS Lambda は [`torea-lambda`](../torea-lambda) リポジトリに分離されている。Cloudflare Queue → Server の queue consumer → Lambda Function URL の順で呼び出される。

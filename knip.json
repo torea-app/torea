@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "exclude": ["exports"],
-  "ignore": ["lambdas/**"],
   "workspaces": {
     ".": {
       "ignoreDependencies": ["@torea/env", "dotenv", "zod"]

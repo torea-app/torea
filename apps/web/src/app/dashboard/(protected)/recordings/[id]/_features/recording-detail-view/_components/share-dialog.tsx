@@ -11,11 +11,6 @@ import {
 import { Input } from "@torea/ui/components/ui/input";
 import { Label } from "@torea/ui/components/ui/label";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@torea/ui/components/ui/popover";
-import {
   RadioGroup,
   RadioGroupItem,
 } from "@torea/ui/components/ui/radio-group";
@@ -48,7 +43,7 @@ export function ShareDialog({ recordingId }: Props) {
   const [type, setType] = useState<ShareType>("org_members");
   const [password, setPassword] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [copiedEmbedId, setCopiedEmbedId] = useState<string | null>(null);
+  const [copiedEmbedUrlId, setCopiedEmbedUrlId] = useState<string | null>(null);
 
   const loadShareLinks = useCallback(async () => {
     setIsLoading(true);
@@ -127,29 +122,12 @@ export function ShareDialog({ recordingId }: Props) {
     return `${window.location.origin}/embed/${shareId}`;
   }
 
-  function getEmbedCode(shareId: string): string {
-    const embedUrl = getEmbedUrl(shareId);
-    return `<iframe src="${embedUrl}" width="640" height="360" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
-  }
-
-  function getResponsiveEmbedCode(shareId: string): string {
-    const embedUrl = getEmbedUrl(shareId);
-    return `<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;"><iframe src="${embedUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe></div>`;
-  }
-
-  async function handleCopyEmbed(shareId: string, responsive: boolean) {
+  async function handleCopyEmbedUrl(shareId: string) {
     try {
-      const code = responsive
-        ? getResponsiveEmbedCode(shareId)
-        : getEmbedCode(shareId);
-      await navigator.clipboard.writeText(code);
-      setCopiedEmbedId(shareId);
-      toast.success(
-        responsive
-          ? "レスポンシブ埋め込みコードをコピーしました"
-          : "埋め込みコードをコピーしました",
-      );
-      setTimeout(() => setCopiedEmbedId(null), 2000);
+      await navigator.clipboard.writeText(getEmbedUrl(shareId));
+      setCopiedEmbedUrlId(shareId);
+      toast.success("埋め込み URL をコピーしました");
+      setTimeout(() => setCopiedEmbedUrlId(null), 2000);
     } catch {
       toast.error("コピーに失敗しました");
     }
@@ -279,61 +257,18 @@ export function ShareDialog({ recordingId }: Props) {
                               <CopyIcon className="size-3.5" />
                             )}
                           </Button>
-                          <Popover>
-                            <PopoverTrigger
-                              render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  title="埋め込みコード"
-                                />
-                              }
-                            >
-                              {copiedEmbedId === link.id ? (
-                                <CheckIcon className="size-3.5 text-green-600" />
-                              ) : (
-                                <CodeIcon className="size-3.5" />
-                              )}
-                            </PopoverTrigger>
-                            <PopoverContent align="end" className="w-80">
-                              <div className="space-y-3">
-                                <p className="font-medium text-sm">
-                                  埋め込みコード
-                                </p>
-                                <div className="space-y-2">
-                                  <div className="rounded-md bg-muted p-2">
-                                    <code className="block break-all text-muted-foreground text-xs">
-                                      {getEmbedCode(link.id)}
-                                    </code>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1"
-                                      onClick={() =>
-                                        handleCopyEmbed(link.id, false)
-                                      }
-                                    >
-                                      <CopyIcon className="mr-1.5 size-3" />
-                                      固定サイズ
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1"
-                                      onClick={() =>
-                                        handleCopyEmbed(link.id, true)
-                                      }
-                                    >
-                                      <CopyIcon className="mr-1.5 size-3" />
-                                      レスポンシブ
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleCopyEmbedUrl(link.id)}
+                            title="埋め込み URL をコピー"
+                          >
+                            {copiedEmbedUrlId === link.id ? (
+                              <CheckIcon className="size-3.5 text-green-600" />
+                            ) : (
+                              <CodeIcon className="size-3.5" />
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon-sm"

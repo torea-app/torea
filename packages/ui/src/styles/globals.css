@@ -227,24 +227,4 @@
   html {
     @apply font-sans;
   }
-  html.no-overscroll,
-  html.no-overscroll body {
-    overscroll-behavior-y: none;
-  }
-}
-
-@layer utilities {
-  .grain-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    opacity: 0.18;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  }
-  .dark .grain-overlay {
-    opacity: 0.12;
-    mix-blend-mode: soft-light;
-  }
 }

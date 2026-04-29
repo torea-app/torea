@@ -7,6 +7,7 @@ import {
 } from "../../lib/constants";
 import {
   audioSettingsStorage,
+  modeSettingsStorage,
   qualitySettingsStorage,
   recordingStateStorage,
 } from "../../lib/storage";
@@ -14,7 +15,9 @@ import type { ExtensionMessage } from "../../types/message";
 import {
   type AudioSettings,
   INITIAL_RECORDING_STATE,
+  type ModeSettings,
   type QualitySettings,
+  type RecordingMode,
   type RecordingState,
   type VideoQuality,
 } from "../../types/recording";
@@ -62,6 +65,7 @@ import { Switch } from "@torea/ui/components/ui/switch";
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
+  AppWindowIcon,
   CheckCircleIcon,
   ExternalLinkIcon,
   Loader2Icon,
@@ -150,6 +154,27 @@ function useQualitySettings(): [
 }
 
 // =============================================
+// カスタムフック: 録画モード設定
+// =============================================
+
+function useModeSettings(): [ModeSettings, (settings: ModeSettings) => void] {
+  const [settings, setSettings] = useState<ModeSettings>({ mode: "tab" });
+
+  useEffect(() => {
+    modeSettingsStorage.getValue().then((value) => {
+      if (value) setSettings(value);
+    });
+  }, []);
+
+  function updateSettings(newSettings: ModeSettings) {
+    setSettings(newSettings);
+    modeSettingsStorage.setValue(newSettings).catch(console.error);
+  }
+
+  return [settings, updateSettings];
+}
+
+// =============================================
 // LoginView — 未認証
 // =============================================
 
@@ -181,12 +206,16 @@ function IdleView({
   onUpdateAudioSettings,
   qualitySettings,
   onUpdateQualitySettings,
+  modeSettings,
+  onUpdateModeSettings,
   onStartRecording,
 }: {
   audioSettings: AudioSettings;
   onUpdateAudioSettings: (settings: AudioSettings) => void;
   qualitySettings: QualitySettings;
   onUpdateQualitySettings: (settings: QualitySettings) => void;
+  modeSettings: ModeSettings;
+  onUpdateModeSettings: (settings: ModeSettings) => void;
   onStartRecording: () => void;
 }) {
   const [tabTitle, setTabTitle] = useState<string | null>(null);
@@ -199,26 +228,89 @@ function IdleView({
     });
   }, []);
 
-  const canRecord = isRecordableUrl(tabUrl);
+  const isTabMode = modeSettings.mode === "tab";
+  const isTabRecordable = isRecordableUrl(tabUrl);
   // undefined = まだ取得中
   const isLoadingTab = tabUrl === undefined;
+  // tab モードは「録画可能 URL」が必要、display モードは常に開始可能
+  const canStart = isTabMode ? !isLoadingTab && isTabRecordable : true;
 
   return (
     <div className="space-y-4">
-      {/* 現在のタブ情報 */}
-      <div className="flex items-start gap-2 rounded-md border p-3">
-        <MonitorIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-        <p className="line-clamp-2 text-sm">
-          {tabTitle ?? "タブ情報を取得中..."}
-        </p>
+      {/* 録画モード選択 */}
+      <div className="space-y-2">
+        <Label className="font-medium text-muted-foreground text-xs">
+          録画対象
+        </Label>
+        <RadioGroup
+          value={modeSettings.mode}
+          onValueChange={(val) =>
+            onUpdateModeSettings({ mode: val as RecordingMode })
+          }
+          className="gap-1.5"
+        >
+          <div>
+            <label
+              htmlFor="mode-tab"
+              className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
+                isTabMode ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+              }`}
+            >
+              <RadioGroupItem id="mode-tab" value="tab" />
+              <MonitorIcon className="size-4 shrink-0 text-muted-foreground" />
+              <div className="flex flex-1 items-baseline justify-between gap-2">
+                <span className="font-medium text-sm">現在のタブ</span>
+                <span className="text-muted-foreground text-xs">
+                  クリックしたタブのみ
+                </span>
+              </div>
+            </label>
+          </div>
+          <div>
+            <label
+              htmlFor="mode-display"
+              className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
+                !isTabMode ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+              }`}
+            >
+              <RadioGroupItem id="mode-display" value="display" />
+              <AppWindowIcon className="size-4 shrink-0 text-muted-foreground" />
+              <div className="flex flex-1 items-baseline justify-between gap-2">
+                <span className="font-medium text-sm">画面・ウィンドウ</span>
+                <span className="text-muted-foreground text-xs">
+                  開始時に共有先を選択
+                </span>
+              </div>
+            </label>
+          </div>
+        </RadioGroup>
+
+        {/* display モード時の音声共有ヒント */}
+        {!isTabMode && (
+          <p className="px-1 text-muted-foreground text-xs leading-relaxed">
+            音声を含めるには Chrome
+            のピッカーで「音声を共有」にチェックを入れてください。ウィンドウ単体の音声共有は
+            Chrome 141 以降（macOS は 14.2 以降）で対応しています。
+          </p>
+        )}
       </div>
 
-      {/* 録画不可タブの警告（EDGE-1） */}
-      {!isLoadingTab && !canRecord && (
+      {/* tab モード時のみ現在のタブ情報を表示 */}
+      {isTabMode && (
+        <div className="flex items-start gap-2 rounded-md border p-3">
+          <MonitorIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <p className="line-clamp-2 text-sm">
+            {tabTitle ?? "タブ情報を取得中..."}
+          </p>
+        </div>
+      )}
+
+      {/* 録画不可タブの警告（tab モード のみ）（EDGE-1） */}
+      {isTabMode && !isLoadingTab && !isTabRecordable && (
         <div className="flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-2 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
           <p className="text-xs">
-            このページは録画できません。別のタブに切り替えてください。
+            このページは録画できません。別のタブに切り替えるか「画面・ウィンドウ」モードを選択してください。
           </p>
         </div>
       )}
@@ -294,11 +386,11 @@ function IdleView({
 
       <Separator />
 
-      {/* 録画開始ボタン（録画不可ページでは disabled） */}
+      {/* 録画開始ボタン（tab モードで録画不可ページの場合のみ disabled） */}
       <Button
         className="w-full"
         onClick={onStartRecording}
-        disabled={isLoadingTab || !canRecord}
+        disabled={!canStart}
       >
         録画を開始
       </Button>
@@ -432,6 +524,7 @@ export default function App() {
   const recordingState = useRecordingState();
   const [audioSettings, updateAudioSettings] = useAudioSettings();
   const [qualitySettings, updateQualitySettings] = useQualitySettings();
+  const [modeSettings, updateModeSettings] = useModeSettings();
   const [isStarting, setIsStarting] = useState(false);
 
   // --- 録画開始 ---
@@ -440,6 +533,7 @@ export default function App() {
     try {
       const response = await browser.runtime.sendMessage({
         type: "START_RECORDING",
+        mode: modeSettings.mode,
         micEnabled: audioSettings.micEnabled,
         quality: qualitySettings.quality,
       } satisfies ExtensionMessage);
@@ -453,7 +547,7 @@ export default function App() {
     } finally {
       setIsStarting(false);
     }
-  }, [audioSettings.micEnabled, qualitySettings.quality]);
+  }, [modeSettings.mode, audioSettings.micEnabled, qualitySettings.quality]);
 
   // --- 録画停止 ---
   const handleStopRecording = useCallback(async () => {
@@ -559,6 +653,8 @@ export default function App() {
         <ProcessingView message="アップロード中..." detail={completingDetail} />
       ) : recordingState.uploadStatus === "requesting_mic" ? (
         <ProcessingView message="マイクへのアクセスを許可してください..." />
+      ) : recordingState.uploadStatus === "selecting_source" ? (
+        <ProcessingView message="共有する画面・ウィンドウを選択してください..." />
       ) : recordingState.isRecording && recordingState.startTime ? (
         <RecordingView
           startTime={recordingState.startTime}
@@ -572,6 +668,8 @@ export default function App() {
           onUpdateAudioSettings={updateAudioSettings}
           qualitySettings={qualitySettings}
           onUpdateQualitySettings={updateQualitySettings}
+          modeSettings={modeSettings}
+          onUpdateModeSettings={updateModeSettings}
           onStartRecording={handleStartRecording}
         />
       )}

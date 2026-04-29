@@ -1,6 +1,7 @@
 import {
   type AudioSettings,
   INITIAL_RECORDING_STATE,
+  type ModeSettings,
   type QualitySettings,
   type RecordingState,
 } from "../types/recording";
@@ -32,4 +33,14 @@ export const audioSettingsStorage = storage.defineItem<AudioSettings>(
 export const qualitySettingsStorage = storage.defineItem<QualitySettings>(
   "local:qualitySettings",
   { defaultValue: { quality: "high" } },
+);
+
+/**
+ * 録画モード設定（local storage — ユーザー設定として永続）
+ * Popup でユーザーが切り替え、Background が読み取る。
+ * 既存ユーザーの体験を変えないよう、初期値は "tab"。
+ */
+export const modeSettingsStorage = storage.defineItem<ModeSettings>(
+  "local:modeSettings",
+  { defaultValue: { mode: "tab" } },
 );

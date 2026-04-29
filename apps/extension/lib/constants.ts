@@ -117,6 +117,12 @@ export const ERROR_MESSAGES = {
   OFFSCREEN_CREATION_FAILED: "録画環境の準備に失敗しました",
   BUFFER_OVERFLOW:
     "ネットワークが遅いため録画バッファが上限を超えました。録画を停止します。ネットワーク環境を改善するか、低画質モードをお試しください。",
+  DISPLAY_CAPTURE_CANCELLED: "画面の選択がキャンセルされました",
+  DISPLAY_CAPTURE_DENIED:
+    "画面録画の権限が拒否されました。OS の設定で Chrome に画面収録権限を付与してください",
+  DISPLAY_CAPTURE_FAILED: "画面の取得に失敗しました",
+  MIC_PROMPT_BLOCKED:
+    "マイク権限のリクエストにアクティブな http(s) タブが必要です。マイクをオフにするか、通常のページを開いた状態で再試行してください",
 } as const;
 
 /** Web ダッシュボードの URL

@@ -1,6 +1,10 @@
-import { QUALITY_PRESETS, RECORDING } from "../../lib/constants";
+import {
+  ERROR_MESSAGES,
+  QUALITY_PRESETS,
+  RECORDING,
+} from "../../lib/constants";
 import type { ExtensionMessage } from "../../types/message";
-import type { VideoQuality } from "../../types/recording";
+import type { RecordingMode, VideoQuality } from "../../types/recording";
 import {
   type AudioMixerResult,
   createAudioMixer,
@@ -14,7 +18,10 @@ import { UploadManager } from "../../utils/upload-manager";
 let mediaRecorder: MediaRecorder | null = null;
 let uploadManager: UploadManager | null = null;
 let audioMixer: AudioMixerResult | null = null;
-let tabStream: MediaStream | null = null;
+/** 録画用の生映像／音声ストリーム（tab capture または getDisplayMedia） */
+let captureStream: MediaStream | null = null;
+/** display モードで OFFSCREEN_PREPARE_DISPLAY_CAPTURE 後に保持しておく事前ストリーム */
+let preparedDisplayStream: MediaStream | null = null;
 let recordingStartTime: number | null = null;
 
 // =============================================
@@ -88,11 +95,107 @@ function detectMimeType(): { mimeType: string; baseMimeType: string } {
 }
 
 // =============================================
+// getDisplayMedia エラーマッピング
+// =============================================
+
+function getDisplayMediaErrorMessage(error: unknown): string {
+  if (error instanceof DOMException) {
+    // ユーザーが Chrome のピッカーで「キャンセル」した
+    if (error.name === "NotAllowedError") {
+      // メッセージ内容で OS 権限拒否とユーザーキャンセルを区別する
+      // （NotAllowedError は両ケースで投げられる）
+      const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("permission") || msg.includes("denied")) {
+        return ERROR_MESSAGES.DISPLAY_CAPTURE_DENIED;
+      }
+      return ERROR_MESSAGES.DISPLAY_CAPTURE_CANCELLED;
+    }
+    if (error.name === "NotFoundError") {
+      return ERROR_MESSAGES.DISPLAY_CAPTURE_FAILED;
+    }
+  }
+  return ERROR_MESSAGES.DISPLAY_CAPTURE_FAILED;
+}
+
+// =============================================
+// display モード: ピッカー事前取得
+// =============================================
+
+/**
+ * Chrome のピッカーを開いて画面/ウィンドウ/タブを選ばせる。
+ * 取得した MediaStream は preparedDisplayStream に保持し、
+ * その後 OFFSCREEN_START_RECORDING で MediaRecorder に渡す。
+ *
+ * 呼び出し元（Background → Popup の click から伝播した user gesture）の
+ * トランジェントアクティベーションが必要。Background から
+ * 速やかに本メッセージを送ることで失効を避ける。
+ */
+async function prepareDisplayCapture(): Promise<{
+  ok: boolean;
+  displaySurface?: string;
+  label?: string;
+  error?: string;
+}> {
+  // 二重取得を避ける
+  if (preparedDisplayStream) {
+    discardPreparedStream();
+  }
+
+  try {
+    // 制約解説:
+    // - audio:true ... ピッカーに「音声を共有」系チェックを表示
+    // - systemAudio:"include" ... 画面ソース選択時に「システム音声を共有」を提示（明示）
+    // - windowAudio:"window" ... Chrome 141+ で「ウィンドウの音声を共有」を提示
+    //   （macOS 14.2+ / Windows / ChromeOS で機能。古い Chrome は単に無視されるヒント）
+    // - selfBrowserSurface:"exclude" ... ユーザーが Torea の UI を録画ソースに選ぶのを防止
+    //
+    // windowAudio / systemAudio / selfBrowserSurface は TS lib に未収録の場合があるため
+    // ローカルに型を補強する。
+    type ExtendedDisplayMediaStreamOptions = DisplayMediaStreamOptions & {
+      systemAudio?: "include" | "exclude";
+      windowAudio?: "include" | "exclude" | "system" | "window";
+      selfBrowserSurface?: "include" | "exclude";
+    };
+    const constraints: ExtendedDisplayMediaStreamOptions = {
+      video: true,
+      audio: true,
+      systemAudio: "include",
+      windowAudio: "window",
+      selfBrowserSurface: "exclude",
+    };
+    const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+
+    preparedDisplayStream = stream;
+
+    const videoTrack = stream.getVideoTracks()[0];
+    const settings = videoTrack?.getSettings() as
+      | (MediaTrackSettings & { displaySurface?: string })
+      | undefined;
+
+    return {
+      ok: true,
+      displaySurface: settings?.displaySurface,
+      label: videoTrack?.label,
+    };
+  } catch (error) {
+    return { ok: false, error: getDisplayMediaErrorMessage(error) };
+  }
+}
+
+function discardPreparedStream(): void {
+  for (const track of preparedDisplayStream?.getTracks() ?? []) {
+    track.stop();
+  }
+  preparedDisplayStream = null;
+}
+
+// =============================================
 // 録画開始
 // =============================================
 
 async function startRecording(
-  streamId: string,
+  mode: RecordingMode,
+  streamId: string | undefined,
   recordingId: string,
   micEnabled: boolean,
   quality: VideoQuality,
@@ -103,30 +206,64 @@ async function startRecording(
   // 2. 品質プリセットを取得
   const preset = QUALITY_PRESETS[quality];
 
-  // 3. タブストリーム取得
-  tabStream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      mandatory: {
-        chromeMediaSource: "tab",
-        chromeMediaSourceId: streamId,
-        maxWidth: preset.videoWidth,
-        maxHeight: preset.videoHeight,
-        maxFrameRate: preset.frameRate,
-      },
-    } as MediaTrackConstraints,
-    audio: {
-      mandatory: {
-        chromeMediaSource: "tab",
-        chromeMediaSourceId: streamId,
-      },
-    } as MediaTrackConstraints,
-  });
+  // 3. キャプチャストリーム取得（モード別）
+  if (mode === "tab") {
+    if (!streamId) {
+      throw new Error("streamId is required for tab mode");
+    }
+    captureStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: streamId,
+          maxWidth: preset.videoWidth,
+          maxHeight: preset.videoHeight,
+          maxFrameRate: preset.frameRate,
+        },
+      } as MediaTrackConstraints,
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: streamId,
+        },
+      } as MediaTrackConstraints,
+    });
+  } else {
+    // display モード: 事前に prepareDisplayCapture で取得済みのストリームを使う
+    if (!preparedDisplayStream) {
+      throw new Error(
+        "display モードでは OFFSCREEN_PREPARE_DISPLAY_CAPTURE が先に必要です",
+      );
+    }
+    captureStream = preparedDisplayStream;
+    preparedDisplayStream = null;
 
-  // 4. オーディオミキシング（タブ音声 + マイク）
-  audioMixer = await createAudioMixer(tabStream, micEnabled);
+    // フレームレート上限を後段で適用（mandatory が使えないため applyConstraints）
+    const videoTrack = captureStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack
+        .applyConstraints({ frameRate: { max: preset.frameRate } })
+        .catch(() => {
+          // 制約が適用できない環境では無視（フレームレートはソース依存）
+        });
 
-  // 5. ミキシングされた音声 + タブ映像で新しい MediaStream を作成
-  const videoTracks = tabStream.getVideoTracks();
+      // ユーザーが Chrome の「共有を停止」ボタン or
+      // 共有元ウィンドウのクローズで track が ended になったら通知
+      videoTrack.addEventListener("ended", () => {
+        browser.runtime
+          .sendMessage({
+            type: "DISPLAY_CAPTURE_ENDED",
+          } satisfies ExtensionMessage)
+          .catch(() => {});
+      });
+    }
+  }
+
+  // 4. オーディオミキシング（タブ／システム音声 + マイク）
+  audioMixer = await createAudioMixer(captureStream, micEnabled, mode);
+
+  // 5. ミキシングされた音声 + 映像で新しい MediaStream を作成
+  const videoTracks = captureStream.getVideoTracks();
   const mixedAudioTracks = audioMixer.mixedStream.getAudioTracks();
   const combinedStream = new MediaStream([...videoTracks, ...mixedAudioTracks]);
 
@@ -234,10 +371,13 @@ function cleanupResources(): void {
   // キープアライブを停止（録画が終わったら SW を維持する必要はない）
   stopKeepalive();
 
-  for (const track of tabStream?.getTracks() ?? []) {
+  for (const track of captureStream?.getTracks() ?? []) {
     track.stop();
   }
-  tabStream = null;
+  captureStream = null;
+
+  // 念のため事前ストリームも破棄
+  discardPreparedStream();
 
   audioMixer?.cleanup();
   audioMixer = null;
@@ -263,8 +403,28 @@ browser.runtime.onMessage.addListener(
         sendResponse({ mimeType: detectMimeType().baseMimeType });
         return false;
 
+      case "OFFSCREEN_PREPARE_DISPLAY_CAPTURE":
+        prepareDisplayCapture()
+          .then((result) => sendResponse(result))
+          .catch((error: unknown) => {
+            sendResponse({
+              ok: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : ERROR_MESSAGES.DISPLAY_CAPTURE_FAILED,
+            });
+          });
+        return true;
+
+      case "OFFSCREEN_DISCARD_PREPARED_STREAM":
+        discardPreparedStream();
+        sendResponse({ success: true });
+        return false;
+
       case "OFFSCREEN_START_RECORDING":
         startRecording(
+          message.mode,
           message.streamId,
           message.recordingId,
           message.micEnabled,

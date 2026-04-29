@@ -6,7 +6,11 @@ import {
 } from "../lib/constants";
 import { recordingStateStorage } from "../lib/storage";
 import type { ExtensionMessage } from "../types/message";
-import { INITIAL_RECORDING_STATE, type VideoQuality } from "../types/recording";
+import {
+  INITIAL_RECORDING_STATE,
+  type RecordingMode,
+  type VideoQuality,
+} from "../types/recording";
 
 // =============================================
 // マイク権限 nonce 管理（SEC-3）
@@ -71,8 +75,11 @@ async function ensureOffscreenDocument(): Promise<void> {
   creatingOffscreen = browser.offscreen
     .createDocument({
       url: offscreenUrl,
-      reasons: ["USER_MEDIA"],
-      justification: "Recording tab audio and video via MediaRecorder",
+      // USER_MEDIA: tabCapture / マイク音声取得
+      // DISPLAY_MEDIA: getDisplayMedia による画面・ウィンドウ録画
+      reasons: ["USER_MEDIA", "DISPLAY_MEDIA"],
+      justification:
+        "Recording tab/window/screen audio and video via MediaRecorder",
     })
     .finally(() => {
       creatingOffscreen = null;
@@ -137,20 +144,21 @@ async function ensureMicrophonePermission(tabId: number): Promise<boolean> {
 
 /**
  * 録画開始の全フローを実行する。
- * 0. マイク権限確認（必要な場合）
- * 1. タブ情報取得
- * 2. Offscreen Document 作成（MIME タイプ検出のため早期作成）
- * 3. MIME タイプ検出
- * 4. 録画レコード作成（正確な MIME タイプを使用）
- * 5. カウントダウン
- * 6. Tab Capture Stream ID 取得
- * 7. Offscreen Document で録画開始
+ *
+ * モード別の主な違い:
+ * - "tab" モード: tabCapture.getMediaStreamId でアクティブタブを録画。
+ *   録画対象タブ ＝ UI 表示タブ。
+ * - "display" モード: Offscreen 内で getDisplayMedia を呼んで Chrome のピッカーを開く。
+ *   ピッカー呼び出しは popup の user gesture を消費する前（Mic 権限ダイアログより前）に
+ *   行う必要がある（gesture 失効を避けるため）。録画対象＝ピッカーで選んだソース、
+ *   UI 表示は録画開始時のアクティブタブ。
  */
 async function handleStartRecording(
+  mode: RecordingMode,
   micEnabled: boolean,
   quality: VideoQuality,
 ): Promise<void> {
-  // --- 1. アクティブタブの取得 ---
+  // --- 1. アクティブタブの取得（UI 表示用 + tab モードでは録画対象） ---
   const [activeTab] = await browser.tabs.query({
     active: true,
     currentWindow: true,
@@ -160,15 +168,48 @@ async function handleStartRecording(
     throw new Error(ERROR_MESSAGES.TAB_CAPTURE_FAILED);
   }
 
-  const tabId = activeTab.id;
-  const tabTitle = activeTab.title ?? undefined;
+  const uiTabId = activeTab.id;
+  const activeTabTitle = activeTab.title ?? undefined;
 
-  // --- 2. マイク権限を確認（サーバー呼び出し前に行うことで無駄な API 呼び出しを防ぐ） ---
+  if (mode === "display") {
+    await handleStartDisplayRecording({
+      uiTabId,
+      activeTabTitle,
+      micEnabled,
+      quality,
+    });
+  } else {
+    await handleStartTabRecording({
+      tabId: uiTabId,
+      tabTitle: activeTabTitle,
+      micEnabled,
+      quality,
+    });
+  }
+}
+
+// =============================================
+// tab モード: 既存フロー
+// =============================================
+
+async function handleStartTabRecording({
+  tabId,
+  tabTitle,
+  micEnabled,
+  quality,
+}: {
+  tabId: number;
+  tabTitle: string | undefined;
+  micEnabled: boolean;
+  quality: VideoQuality;
+}): Promise<void> {
+  // --- 1. マイク権限を確認（サーバー呼び出し前に行うことで無駄な API 呼び出しを防ぐ） ---
   if (micEnabled) {
     // ユーザーに対してマイク許可ダイアログを表示する可能性があるため、
     // ポップアップ側にフィードバックを与えるため requesting_mic 状態をセットする。
     await recordingStateStorage.setValue({
       ...INITIAL_RECORDING_STATE,
+      mode: "tab",
       uploadStatus: "requesting_mic",
     });
     const granted = await ensureMicrophonePermission(tabId);
@@ -180,27 +221,18 @@ async function handleStartRecording(
     await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
   }
 
-  // --- 3. Offscreen Document を早期作成（MIME タイプ検出に使用） ---
+  // --- 2. Offscreen Document を早期作成（MIME タイプ検出に使用） ---
   try {
     await ensureOffscreenDocument();
   } catch (e) {
-    console.error("[Torea] Step3: offscreen creation failed", e);
+    console.error("[Torea] tab: offscreen creation failed", e);
     throw new Error(ERROR_MESSAGES.OFFSCREEN_CREATION_FAILED);
   }
 
-  // --- 4. Offscreen Document から実際にサポートされる MIME タイプを取得 ---
-  let mimeType = "video/mp4";
-  try {
-    const mimeTypeResponse = await browser.runtime.sendMessage({
-      type: "QUERY_MIME_TYPE",
-    } satisfies ExtensionMessage);
-    mimeType =
-      (mimeTypeResponse as { mimeType?: string })?.mimeType ?? "video/mp4";
-  } catch {
-    // Offscreen が応答しない場合は "video/mp4" を維持
-  }
+  // --- 3. Offscreen Document から実際にサポートされる MIME タイプを取得 ---
+  const mimeType = await queryOffscreenMimeType();
 
-  // --- 5. サーバーに録画レコードを作成（正確な MIME タイプを渡す） ---
+  // --- 4. サーバーに録画レコードを作成 ---
   let recordingId: string;
   try {
     const result = await recordingApi.create({ title: tabTitle, mimeType });
@@ -212,84 +244,67 @@ async function handleStartRecording(
     throw new Error(message);
   }
 
-  // --- 6. 初期状態を保存 ---
+  // --- 5. 初期状態を保存 ---
   await recordingStateStorage.setValue({
     isRecording: false,
     recordingId,
+    mode: "tab",
     tabId,
+    uiTabId: tabId,
     startTime: null,
     uploadStatus: "uploading",
     errorMessage: null,
     uploadedBytes: null,
   });
 
-  // --- 7. カウントダウン表示 ---
+  // --- 6. カウントダウン表示 ---
   try {
     await showCountdownAndWait(tabId);
   } catch {
-    // キャンセルまたはエラー → 録画を中止
     await recordingApi.abort(recordingId).catch(() => {});
     await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
     await closeOffscreenDocument();
     return;
   }
 
-  // --- 8. Tab Capture Stream ID 取得 ---
+  // --- 7. Tab Capture Stream ID 取得 ---
   let streamId: string;
   try {
     streamId = await browser.tabCapture.getMediaStreamId({
       targetTabId: tabId,
     });
   } catch (e) {
-    console.error("[Torea] Step8: tabCapture.getMediaStreamId failed", e);
+    console.error("[Torea] tab: tabCapture.getMediaStreamId failed", e);
     await recordingApi.abort(recordingId).catch(() => {});
     await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
     await closeOffscreenDocument();
     throw new Error(ERROR_MESSAGES.TAB_CAPTURE_FAILED);
   }
 
-  // --- 9. Offscreen Document で録画開始（既に作成済み） ---
-  let offscreenResponse: { success: boolean; error?: string } | undefined;
-  try {
-    offscreenResponse = await browser.runtime.sendMessage({
-      type: "OFFSCREEN_START_RECORDING",
-      streamId,
-      recordingId,
-      micEnabled,
-      quality,
-    } satisfies ExtensionMessage);
-  } catch (e) {
-    console.error("[Torea] Step9: sendMessage to offscreen failed", e);
-    await recordingApi.abort(recordingId).catch(() => {});
-    await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
-    throw new Error(ERROR_MESSAGES.RECORDING_START_FAILED);
-  }
+  // --- 8. Offscreen Document で録画開始 ---
+  await sendStartRecordingToOffscreen({
+    mode: "tab",
+    streamId,
+    recordingId,
+    micEnabled,
+    quality,
+  });
 
-  if (!offscreenResponse?.success) {
-    console.error(
-      "[Torea] Step9: offscreen returned failure",
-      offscreenResponse?.error,
-    );
-    await recordingApi.abort(recordingId).catch(() => {});
-    await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
-    throw new Error(
-      offscreenResponse?.error ?? ERROR_MESSAGES.RECORDING_START_FAILED,
-    );
-  }
-
-  // --- 10. 録画開始状態を保存 ---
+  // --- 9. 録画開始状態を保存 ---
   const startTime = Date.now();
   await recordingStateStorage.setValue({
     isRecording: true,
     recordingId,
+    mode: "tab",
     tabId,
+    uiTabId: tabId,
     startTime,
     uploadStatus: "uploading",
     errorMessage: null,
     uploadedBytes: null,
   });
 
-  // --- 11. 録画インジケーターを表示 ---
+  // --- 10. 録画インジケーターを表示 ---
   browser.tabs
     .sendMessage(tabId, {
       type: "SHOW_RECORDING_INDICATOR",
@@ -298,6 +313,306 @@ async function handleStartRecording(
     .catch(() => {
       // コンテンツスクリプトが未ロードの場合は無視
     });
+}
+
+// =============================================
+// display モード: getDisplayMedia フロー
+// =============================================
+
+async function handleStartDisplayRecording({
+  uiTabId,
+  activeTabTitle,
+  micEnabled,
+  quality,
+}: {
+  uiTabId: number;
+  activeTabTitle: string | undefined;
+  micEnabled: boolean;
+  quality: VideoQuality;
+}): Promise<void> {
+  // --- 1. Offscreen Document を作成（getDisplayMedia の呼び出し先） ---
+  // popup → SW → offscreen のメッセージチェーンで user gesture が伝播するため、
+  // これらは可能な限り await を挟まずに連続で行う。
+  try {
+    await ensureOffscreenDocument();
+  } catch (e) {
+    console.error("[Torea] display: offscreen creation failed", e);
+    throw new Error(ERROR_MESSAGES.OFFSCREEN_CREATION_FAILED);
+  }
+
+  // popup 側にもフィードバックを与えるため selecting_source 状態をセット
+  await recordingStateStorage.setValue({
+    ...INITIAL_RECORDING_STATE,
+    mode: "display",
+    uiTabId,
+    uploadStatus: "selecting_source",
+  });
+
+  // --- 2. Chrome ピッカーを開いて MediaStream を事前取得 ---
+  let displayCaptureResult:
+    | {
+        ok: boolean;
+        displaySurface?: string;
+        label?: string;
+        error?: string;
+      }
+    | undefined;
+  try {
+    displayCaptureResult = await browser.runtime.sendMessage({
+      type: "OFFSCREEN_PREPARE_DISPLAY_CAPTURE",
+    } satisfies ExtensionMessage);
+  } catch (e) {
+    console.error(
+      "[Torea] display: sendMessage to offscreen (prepare) failed",
+      e,
+    );
+    await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
+    await closeOffscreenDocument();
+    throw new Error(ERROR_MESSAGES.DISPLAY_CAPTURE_FAILED);
+  }
+
+  if (!displayCaptureResult?.ok) {
+    // ユーザーがピッカーをキャンセルした場合は静かに idle に戻す
+    await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
+    await closeOffscreenDocument();
+    const errMessage =
+      displayCaptureResult?.error ?? ERROR_MESSAGES.DISPLAY_CAPTURE_FAILED;
+    if (errMessage === ERROR_MESSAGES.DISPLAY_CAPTURE_CANCELLED) {
+      // キャンセルは「エラー」扱いせず、idle 復帰だけで終わる
+      return;
+    }
+    throw new Error(errMessage);
+  }
+
+  // --- 3. マイク権限（必要な場合） ---
+  if (micEnabled) {
+    await recordingStateStorage.setValue({
+      ...INITIAL_RECORDING_STATE,
+      mode: "display",
+      uiTabId,
+      uploadStatus: "requesting_mic",
+    });
+    const granted = await ensureMicrophonePermissionForDisplay(uiTabId);
+    if (!granted) {
+      await discardDisplayCaptureStream();
+      await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
+      await closeOffscreenDocument();
+      throw new Error(ERROR_MESSAGES.MIC_PERMISSION_DENIED);
+    }
+  }
+
+  // --- 4. MIME タイプ検出 ---
+  const mimeType = await queryOffscreenMimeType();
+
+  // --- 5. サーバーに録画レコードを作成 ---
+  // タイトルは getDisplayMedia の track label を優先（"window: Some App" など）。
+  // 取得できない場合は録画開始時のアクティブタブ名にフォールバック。
+  const title =
+    displayCaptureResult.label && displayCaptureResult.label.length > 0
+      ? displayCaptureResult.label
+      : activeTabTitle;
+
+  let recordingId: string;
+  try {
+    const result = await recordingApi.create({ title, mimeType });
+    recordingId = result.id;
+  } catch (error) {
+    await discardDisplayCaptureStream();
+    await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
+    await closeOffscreenDocument();
+    const message =
+      error instanceof Error ? error.message : ERROR_MESSAGES.SERVER_ERROR;
+    throw new Error(message);
+  }
+
+  // --- 6. 初期状態を保存 ---
+  await recordingStateStorage.setValue({
+    isRecording: false,
+    recordingId,
+    mode: "display",
+    tabId: null,
+    uiTabId,
+    startTime: null,
+    uploadStatus: "uploading",
+    errorMessage: null,
+    uploadedBytes: null,
+  });
+
+  // --- 7. カウントダウン表示（アクティブタブのみ） ---
+  // chrome:// などコンテンツスクリプト注入できないタブではカウントダウンを
+  // スキップする（display モードの主目的を阻害しないため）。
+  try {
+    await showCountdownAndWait(uiTabId);
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : "";
+    if (errMsg === "Cancelled") {
+      // ユーザーが Esc / キャンセルボタンで中止
+      await discardDisplayCaptureStream();
+      await recordingApi.abort(recordingId).catch(() => {});
+      await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
+      await closeOffscreenDocument();
+      return;
+    }
+    // chrome:// ページ等で content script が動かない場合はカウントダウンをスキップ
+    console.warn(
+      "[Torea] display: countdown skipped (content script unavailable)",
+      e,
+    );
+  }
+
+  // --- 8. Offscreen Document で録画開始 ---
+  try {
+    await sendStartRecordingToOffscreen({
+      mode: "display",
+      streamId: undefined,
+      recordingId,
+      micEnabled,
+      quality,
+    });
+  } catch (error) {
+    await discardDisplayCaptureStream();
+    await recordingApi.abort(recordingId).catch(() => {});
+    await recordingStateStorage.setValue(INITIAL_RECORDING_STATE);
+    await closeOffscreenDocument();
+    throw error;
+  }
+
+  // --- 9. 録画開始状態を保存 ---
+  const startTime = Date.now();
+  await recordingStateStorage.setValue({
+    isRecording: true,
+    recordingId,
+    mode: "display",
+    tabId: null,
+    uiTabId,
+    startTime,
+    uploadStatus: "uploading",
+    errorMessage: null,
+    uploadedBytes: null,
+  });
+
+  // --- 10. 録画インジケーターを表示（UI タブ＝録画開始時のアクティブタブ） ---
+  browser.tabs
+    .sendMessage(uiTabId, {
+      type: "SHOW_RECORDING_INDICATOR",
+      startTime,
+    } satisfies ExtensionMessage)
+    .catch(() => {
+      // chrome:// など content script 不可のタブでは無視
+    });
+}
+
+// =============================================
+// 共通ヘルパー
+// =============================================
+
+async function queryOffscreenMimeType(): Promise<string> {
+  try {
+    const mimeTypeResponse = await browser.runtime.sendMessage({
+      type: "QUERY_MIME_TYPE",
+    } satisfies ExtensionMessage);
+    return (mimeTypeResponse as { mimeType?: string })?.mimeType ?? "video/mp4";
+  } catch {
+    // Offscreen が応答しない場合は "video/mp4" を維持
+    return "video/mp4";
+  }
+}
+
+async function sendStartRecordingToOffscreen(args: {
+  mode: RecordingMode;
+  streamId: string | undefined;
+  recordingId: string;
+  micEnabled: boolean;
+  quality: VideoQuality;
+}): Promise<void> {
+  let offscreenResponse: { success: boolean; error?: string } | undefined;
+  try {
+    offscreenResponse = await browser.runtime.sendMessage({
+      type: "OFFSCREEN_START_RECORDING",
+      mode: args.mode,
+      streamId: args.streamId,
+      recordingId: args.recordingId,
+      micEnabled: args.micEnabled,
+      quality: args.quality,
+    } satisfies ExtensionMessage);
+  } catch (e) {
+    console.error("[Torea] sendStartRecordingToOffscreen failed", e);
+    throw new Error(ERROR_MESSAGES.RECORDING_START_FAILED);
+  }
+
+  if (!offscreenResponse?.success) {
+    console.error(
+      "[Torea] offscreen returned failure",
+      offscreenResponse?.error,
+    );
+    throw new Error(
+      offscreenResponse?.error ?? ERROR_MESSAGES.RECORDING_START_FAILED,
+    );
+  }
+}
+
+async function discardDisplayCaptureStream(): Promise<void> {
+  try {
+    await browser.runtime.sendMessage({
+      type: "OFFSCREEN_DISCARD_PREPARED_STREAM",
+    } satisfies ExtensionMessage);
+  } catch {
+    // Offscreen が既に閉じている場合は無視
+  }
+}
+
+/**
+ * display モード用のマイク権限取得。
+ *
+ * tab モードと異なり、UI タブが chrome:// などの場合 content script が動かないので、
+ * 通常のページが開いているタブを探してそこに iframe を注入する。
+ * 見つからない場合はエラー（ユーザーに通常ページを開いてもらう必要がある）。
+ */
+async function ensureMicrophonePermissionForDisplay(
+  uiTabId: number,
+): Promise<boolean> {
+  // 既に granted ならそのまま OK
+  try {
+    const status = await navigator.permissions.query({
+      name: "microphone" as PermissionName,
+    });
+    if (status.state === "granted") return true;
+    if (status.state === "denied") return false;
+  } catch {
+    // permissions.query 未対応環境ではフォールスルー
+  }
+
+  // UI タブが http(s) であればそこに注入
+  const uiTab = await browser.tabs.get(uiTabId).catch(() => undefined);
+  const injectableTabId = isInjectableTab(uiTab)
+    ? uiTabId
+    : await findInjectableTab();
+
+  if (injectableTabId === null) {
+    throw new Error(ERROR_MESSAGES.MIC_PROMPT_BLOCKED);
+  }
+
+  return ensureMicrophonePermission(injectableTabId);
+}
+
+function isInjectableTab(tab: Browser.tabs.Tab | undefined): boolean {
+  if (!tab?.url) return false;
+  try {
+    const { protocol } = new URL(tab.url);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function findInjectableTab(): Promise<number | null> {
+  const tabs = await browser.tabs.query({});
+  for (const tab of tabs) {
+    if (tab.id !== undefined && isInjectableTab(tab)) {
+      return tab.id;
+    }
+  }
+  return null;
 }
 
 // =============================================
@@ -401,10 +716,10 @@ async function handleStopRecording(): Promise<void> {
   const state = await recordingStateStorage.getValue();
   if (!state?.isRecording) return;
 
-  // 録画インジケーターを非表示
-  if (state.tabId) {
+  // 録画インジケーターを非表示（UI タブ＝録画開始時のアクティブタブ）
+  if (state.uiTabId) {
     browser.tabs
-      .sendMessage(state.tabId, {
+      .sendMessage(state.uiTabId, {
         type: "HIDE_RECORDING_INDICATOR",
       } satisfies ExtensionMessage)
       .catch(() => {});
@@ -465,10 +780,10 @@ async function handleRecordingError(errorMessage: string): Promise<void> {
     errorMessage,
   });
 
-  // インジケーターを非表示
-  if (state?.tabId) {
+  // インジケーターを非表示（UI タブ）
+  if (state?.uiTabId) {
     browser.tabs
-      .sendMessage(state.tabId, {
+      .sendMessage(state.uiTabId, {
         type: "HIDE_RECORDING_INDICATOR",
       } satisfies ExtensionMessage)
       .catch(() => {});
@@ -483,9 +798,19 @@ async function handleRecordingError(errorMessage: string): Promise<void> {
 
 browser.tabs.onRemoved.addListener(async (closedTabId) => {
   const state = await recordingStateStorage.getValue();
-  if (state?.isRecording && state.tabId === closedTabId) {
-    // 録画中のタブが閉じられた → 録画を停止
+  if (!state?.isRecording) return;
+
+  // tab モード: 録画対象タブが閉じられたら停止
+  if (state.mode === "tab" && state.tabId === closedTabId) {
     await handleStopRecording();
+    return;
+  }
+
+  // display モード: UI タブが閉じられても録画自体は止めない
+  // （録画対象は別ウィンドウ／画面の可能性があるため）。
+  // 必要なら uiTabId をクリアしてインジケーター送信先を無効化する。
+  if (state.mode === "display" && state.uiTabId === closedTabId) {
+    await recordingStateStorage.setValue({ ...state, uiTabId: null });
   }
 });
 
@@ -502,6 +827,7 @@ async function recoverFromCrash(): Promise<void> {
   if (
     state.isRecording ||
     state.uploadStatus === "requesting_mic" ||
+    state.uploadStatus === "selecting_source" ||
     state.uploadStatus === "uploading" ||
     state.uploadStatus === "completing"
   ) {
@@ -526,7 +852,7 @@ browser.runtime.onMessage.addListener(
     switch (message.type) {
       // --- Popup → Background ---
       case "START_RECORDING": {
-        handleStartRecording(message.micEnabled, message.quality)
+        handleStartRecording(message.mode, message.micEnabled, message.quality)
           .then(() => sendResponse({ success: true }))
           .catch(async (error: unknown) => {
             const errorMessage =
@@ -569,6 +895,16 @@ browser.runtime.onMessage.addListener(
         handleRecordingError(message.error);
         return false;
 
+      case "DISPLAY_CAPTURE_ENDED":
+        // display モード時に Chrome の「共有を停止」ボタン or 共有元ウィンドウを
+        // 閉じたケース。録画中なら通常の停止フローへ進める。
+        recordingStateStorage.getValue().then((state) => {
+          if (state?.isRecording && state.mode === "display") {
+            handleStopRecording();
+          }
+        });
+        return false;
+
       case "UPLOAD_PROGRESS":
         // アップロード進捗を RecordingState に保存して Popup で表示できるようにする（UX-4）
         recordingStateStorage.getValue().then((state) => {
@@ -590,10 +926,10 @@ browser.runtime.onMessage.addListener(
 
       // --- Content Script → Background ---
       case "STOP_RECORDING_FROM_INDICATOR":
-        // 録画中のタブからのメッセージのみ受け付ける（SEC-1）
+        // 録画中の UI タブからのメッセージのみ受け付ける（SEC-1）
         // 他タブのコンテンツスクリプトが録画を不正停止できないようにする
         recordingStateStorage.getValue().then((state) => {
-          if (state?.isRecording && sender.tab?.id === state.tabId) {
+          if (state?.isRecording && sender.tab?.id === state.uiTabId) {
             handleStopRecording();
           }
         });

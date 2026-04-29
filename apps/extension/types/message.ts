@@ -1,4 +1,4 @@
-import type { UploadProgress, VideoQuality } from "./recording";
+import type { RecordingMode, UploadProgress, VideoQuality } from "./recording";
 
 // =============================================
 // Popup → Background
@@ -6,6 +6,7 @@ import type { UploadProgress, VideoQuality } from "./recording";
 
 type StartRecordingMessage = {
   type: "START_RECORDING";
+  mode: RecordingMode;
   micEnabled: boolean;
   quality: VideoQuality;
 };
@@ -18,9 +19,27 @@ type StopRecordingMessage = {
 // Background → Offscreen
 // =============================================
 
+/**
+ * "display" モード時に getDisplayMedia の Chrome ピッカーを開く要求。
+ * ユーザーが画面 / ウィンドウ / タブを選ぶと、Offscreen が MediaStream を保持し、
+ * { ok: true, displaySurface, label } を返す。
+ * キャンセル時は { ok: false, error } を返す。
+ */
+type OffscreenPrepareDisplayCaptureMessage = {
+  type: "OFFSCREEN_PREPARE_DISPLAY_CAPTURE";
+};
+
+/**
+ * Offscreen Document が保持中の事前取得 MediaStream（display モード）または
+ * tabCapture の streamId（tab モード）を使って録画を開始する要求。
+ *
+ * - mode: "tab" の場合 streamId が必須
+ * - mode: "display" の場合 streamId は不要（OFFSCREEN_PREPARE_DISPLAY_CAPTURE 済みのストリームを使う）
+ */
 type OffscreenStartRecordingMessage = {
   type: "OFFSCREEN_START_RECORDING";
-  streamId: string;
+  mode: RecordingMode;
+  streamId?: string;
   recordingId: string;
   micEnabled: boolean;
   quality: VideoQuality;
@@ -28,6 +47,13 @@ type OffscreenStartRecordingMessage = {
 
 type OffscreenStopRecordingMessage = {
   type: "OFFSCREEN_STOP_RECORDING";
+};
+
+/**
+ * 事前取得した MediaStream を破棄する要求（display モードでカウントダウンキャンセル時など）。
+ */
+type OffscreenDiscardPreparedStreamMessage = {
+  type: "OFFSCREEN_DISCARD_PREPARED_STREAM";
 };
 
 // =============================================
@@ -52,6 +78,15 @@ type VideoReadyMessage = {
   type: "VIDEO_READY";
   durationMs: number;
   fileSize: number;
+};
+
+/**
+ * "display" モード時、ユーザーが Chrome の「共有を停止」ボタンや
+ * 共有元ウィンドウのクローズで track が ended になった通知。
+ * Background は STOP_RECORDING 同等のフローへ進める。
+ */
+type DisplayCaptureEndedMessage = {
+  type: "DISPLAY_CAPTURE_ENDED";
 };
 
 // =============================================
@@ -146,14 +181,17 @@ export type ExtensionMessage =
   | StartRecordingMessage
   | StopRecordingMessage
   // Background → Offscreen
+  | OffscreenPrepareDisplayCaptureMessage
   | OffscreenStartRecordingMessage
   | OffscreenStopRecordingMessage
+  | OffscreenDiscardPreparedStreamMessage
   | QueryMimeTypeMessage
   // Offscreen → Background
   | RecordingStartedMessage
   | RecordingErrorMessage
   | UploadProgressMessage
   | VideoReadyMessage
+  | DisplayCaptureEndedMessage
   | KeepaliveMessage
   // Background → Content Script
   | InjectMicPermissionIframeMessage

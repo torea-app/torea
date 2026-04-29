@@ -6,20 +6,39 @@ export type QualitySettings = {
   quality: VideoQuality;
 };
 
+/**
+ * 録画モード。
+ * - "tab": tabCapture でアクティブタブのみを録画する（既存挙動）
+ * - "display": getDisplayMedia で Chrome の共有ピッカーを開き、
+ *   画面 / ウィンドウ / タブのいずれかをユーザーに選ばせる
+ */
+export type RecordingMode = "tab" | "display";
+
+/** モード設定 */
+export type ModeSettings = {
+  mode: RecordingMode;
+};
+
 /** 録画の状態（WXT Storage に保存） */
 export type RecordingState = {
   /** 録画中かどうか */
   isRecording: boolean;
   /** サーバー上の録画 ID */
   recordingId: string | null;
-  /** 録画対象のタブ ID */
+  /** 録画モード */
+  mode: RecordingMode;
+  /** 録画対象タブ ID（"tab" モードのみ。"display" モードでは null） */
   tabId: number | null;
+  /** UI（カウントダウン / 録画中インジケーター）を表示するタブ ID。
+   * "tab" モードでは tabId と同じ。"display" モードでは録画開始時のアクティブタブ。 */
+  uiTabId: number | null;
   /** 録画開始時刻（Date.now()） */
   startTime: number | null;
   /** アップロードステータス */
   uploadStatus:
     | "idle"
     | "requesting_mic"
+    | "selecting_source"
     | "uploading"
     | "completing"
     | "completed"
@@ -35,7 +54,9 @@ export type RecordingState = {
 export const INITIAL_RECORDING_STATE: RecordingState = {
   isRecording: false,
   recordingId: null,
+  mode: "tab",
   tabId: null,
+  uiTabId: null,
   startTime: null,
   uploadStatus: "idle",
   errorMessage: null,

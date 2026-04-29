@@ -15,6 +15,8 @@ export const user = sqliteTable("user", {
     .default(false)
     .notNull(),
   image: text("image"),
+  // @better-auth/stripe plugin が要求する追加列
+  stripeCustomerId: text("stripe_customer_id"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),

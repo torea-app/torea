@@ -14,6 +14,9 @@ export default defineConfig({
       "tabCapture",
       "offscreen",
       "scripting",
+      // 録画自動停止の事前通知（残り 2 分 / 30 秒 / 上限到達）と上限到達後の
+      // アップグレード案内を表示するため
+      "notifications",
     ],
     web_accessible_resources: [
       {

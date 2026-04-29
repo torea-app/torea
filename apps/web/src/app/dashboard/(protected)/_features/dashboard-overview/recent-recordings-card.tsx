@@ -9,10 +9,7 @@ import {
 } from "@torea/ui/components/ui/card";
 import { ArrowRightIcon, VideoIcon } from "lucide-react";
 import Link from "next/link";
-import {
-  formatDuration,
-  formatRelativeTime,
-} from "../../recordings/_lib/format";
+import { formatDuration, formatRelativeTime } from "@/lib/format";
 import { getRecordings } from "../../recordings/_lib/queries";
 
 const RECENT_LIMIT = 5;

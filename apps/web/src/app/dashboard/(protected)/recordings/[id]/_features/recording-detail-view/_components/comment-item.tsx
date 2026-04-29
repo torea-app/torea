@@ -20,8 +20,8 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
-import { authClient } from "@/lib/auth-client";
-import { formatDuration, formatRelativeTime } from "../../../../_lib/format";
+import { useAuth } from "@/components/auth-provider";
+import { formatDuration, formatRelativeTime } from "@/lib/format";
 import type { CommentWithUser } from "../../../../_lib/types";
 
 type Props = {
@@ -41,7 +41,7 @@ export function CommentItem({
   onReply,
   isTopLevel,
 }: Props) {
-  const { data: session } = authClient.useSession();
+  const { session } = useAuth();
   const isAuthor = session?.user?.id === comment.userId;
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState(comment.body);

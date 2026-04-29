@@ -14,11 +14,14 @@
   },
   "scripts": {},
   "dependencies": {
+    "@better-auth/stripe": "^1.6.3",
     "@torea/db": "workspace:*",
     "@torea/env": "workspace:*",
+    "@torea/shared": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "resend": "catalog:",
+    "stripe": "^22.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {

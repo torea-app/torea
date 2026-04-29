@@ -66,6 +66,14 @@ const webhookDeliveryQueue = await Queue("webhook-delivery-queue", {
   name: `torea-webhook-delivery-${stage}`,
 });
 
+const driveExportQueue = await Queue<{
+  exportId: string;
+  recordingId: string;
+  organizationId: string;
+}>("drive-export-queue", {
+  name: `torea-drive-export-${stage}`,
+});
+
 const webhookSecretKv = await KVNamespace("torea-webhook-secrets", {
   title: `torea-webhook-secrets-${stage}`,
 });
@@ -81,6 +89,8 @@ export const web = await Nextjs("web", {
     BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
     BETTER_AUTH_URL: alchemy.env.BETTER_AUTH_URL!,
     COOKIE_DOMAIN: alchemy.env.COOKIE_DOMAIN!,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      alchemy.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
   },
   dev: {
     command: "pnpm next dev --webpack --port 3001",
@@ -106,13 +116,36 @@ export const server = await Worker("server", {
     VIDEO_PROCESSING_QUEUE: videoProcessingQueue,
     TRANSCRIPTION_QUEUE: transcriptionQueue,
     WEBHOOK_DELIVERY_QUEUE: webhookDeliveryQueue,
+    DRIVE_EXPORT_QUEUE: driveExportQueue,
     // Queue consumer の dispatch 用に実名を注入する。
     // `batch.queue` は stage サフィックス込みのフル名 (例: torea-video-processing-prod) を返すため、
     // Worker 側でハードコードせずバインディング経由で比較する。
     VIDEO_PROCESSING_QUEUE_NAME: videoProcessingQueue.name,
     TRANSCRIPTION_QUEUE_NAME: transcriptionQueue.name,
     WEBHOOK_DELIVERY_QUEUE_NAME: webhookDeliveryQueue.name,
+    DRIVE_EXPORT_QUEUE_NAME: driveExportQueue.name,
     WEBHOOK_SECRET_KV: webhookSecretKv,
+    // Google Drive 連携 (OAuth 2.0 Authorization Code + PKCE / scope: drive.file)
+    GOOGLE_OAUTH_CLIENT_ID: alchemy.env.GOOGLE_OAUTH_CLIENT_ID!,
+    GOOGLE_OAUTH_CLIENT_SECRET: alchemy.secret.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+    GOOGLE_OAUTH_REDIRECT_URI: alchemy.env.GOOGLE_OAUTH_REDIRECT_URI!,
+    // AES-256-GCM 鍵 (base64 32 bytes)。トークンを D1 に保存する際の at-rest 暗号化に使用。
+    INTEGRATION_ENCRYPTION_KEY: alchemy.secret.env.INTEGRATION_ENCRYPTION_KEY!,
+    // Stripe（@better-auth/stripe plugin）
+    STRIPE_SECRET_KEY: alchemy.secret.env.STRIPE_SECRET_KEY!,
+    STRIPE_WEBHOOK_SECRET: alchemy.secret.env.STRIPE_WEBHOOK_SECRET!,
+    STRIPE_PRICE_ID_PRO_MONTH: alchemy.env.STRIPE_PRICE_ID_PRO_MONTH!,
+    STRIPE_PRICE_ID_PRO_YEAR: alchemy.env.STRIPE_PRICE_ID_PRO_YEAR!,
+    STRIPE_PORTAL_RETURN_URL: alchemy.env.STRIPE_PORTAL_RETURN_URL!,
+    STRIPE_CHECKOUT_SUCCESS_URL: alchemy.env.STRIPE_CHECKOUT_SUCCESS_URL!,
+    STRIPE_CHECKOUT_CANCEL_URL: alchemy.env.STRIPE_CHECKOUT_CANCEL_URL!,
+    // ローカル開発時は既定で true（Drive API を呼ばない）。
+    // ただし .env.local で SKIP_DRIVE_EXPORT=false を明示すれば dev でも Drive 送信を有効化できる
+    // (Phase 5 の手動検証用)。
+    // 本番デプロイ時は env var を参照し、未設定なら空文字（= Drive 送信を実行）。
+    SKIP_DRIVE_EXPORT: process.env.ALCHEMY_DEPLOY
+      ? (process.env.SKIP_DRIVE_EXPORT ?? "")
+      : (process.env.SKIP_DRIVE_EXPORT ?? "true"),
     // AWS Lambda（動画変換処理）
     LAMBDA_FUNCTION_URL: alchemy.env.LAMBDA_FUNCTION_URL!,
     LAMBDA_REGION: alchemy.env.LAMBDA_REGION!,
@@ -137,6 +170,12 @@ export const server = await Worker("server", {
     {
       queue: webhookDeliveryQueue,
       settings: { maxRetries: 0, batchSize: 10 },
+    },
+    // Drive エクスポートは長時間ストリーム転送になるため 1 件ずつ処理。
+    // retry 上限を超えたら DLQ なしで failed 行に書き戻す（runner 側で制御）。
+    {
+      queue: driveExportQueue,
+      settings: { maxRetries: 5, batchSize: 1 },
     },
   ],
   // 10 分間隔で webhook delivery のセーフティネット Cron を実行

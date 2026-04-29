@@ -24,17 +24,7 @@ import {
   SelectValue,
 } from "@torea/ui/components/ui/select";
 import { Trash2Icon } from "lucide-react";
-
-type Member = {
-  id: string;
-  role: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string | null;
-  };
-};
+import type { Member } from "../../../../../_lib/types";
 
 export function MemberCard({
   member,

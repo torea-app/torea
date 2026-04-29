@@ -50,6 +50,18 @@ export type WebhookEventPayloads = {
     recordingId: string;
     deletedByUserId: string;
   };
+  "recording.drive_exported": {
+    recordingId: string;
+    kind: "video" | "transcript";
+    driveFileId: string;
+    driveWebViewLink: string;
+  };
+  "recording.drive_export_failed": {
+    recordingId: string;
+    kind: "video" | "transcript";
+    errorCode: string;
+    errorMessage: string;
+  };
   "transcription.started": {
     transcriptionId: string;
     recordingId: string;

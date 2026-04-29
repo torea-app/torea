@@ -19,6 +19,7 @@
     "db:seed": "curl -s -X POST http://localhost:3000/api/seed | node -e \"process.stdin.on('data',d=>{const r=JSON.parse(d);console.log(r.success?'✅ Seed complete: '+JSON.stringify(r.summary,null,2)+'\\n\\nLogin: '+r.credentials.email+' / '+r.credentials.password:'❌ '+JSON.stringify(r))})\"",
     "db:reset": "rm -rf .alchemy/miniflare/v3/d1 && rm -f packages/infra/.alchemy/torea/dev/database.json",
     "db:auth:generate": "npx auth@latest generate --config packages/auth/src/index.ts --output packages/db/src/schema/auth.ts -y",
+    "setup:stripe": "bash scripts/setup-stripe.sh",
     "check": "biome check --write .",
     "knip": "knip",
     "depcruise": "pnpm -F @torea/server depcruise"

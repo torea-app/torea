@@ -58,3 +58,21 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+          # Google Drive 連携 (OAuth 2.0 / scope: drive.file)
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REDIRECT_URI: ${{ vars.GOOGLE_OAUTH_REDIRECT_URI }}
+          # D1 に保存するアクセス/リフレッシュトークンの at-rest 暗号化鍵 (AES-256-GCM)
+          INTEGRATION_ENCRYPTION_KEY: ${{ secrets.INTEGRATION_ENCRYPTION_KEY }}
+
+          # Stripe（@better-auth/stripe）
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          # Publishable key はクライアントに露出する設計なので Variable で扱う
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_PRICE_ID_PRO_MONTH: ${{ vars.STRIPE_PRICE_ID_PRO_MONTH }}
+          STRIPE_PRICE_ID_PRO_YEAR: ${{ vars.STRIPE_PRICE_ID_PRO_YEAR }}
+          STRIPE_PORTAL_RETURN_URL: ${{ vars.STRIPE_PORTAL_RETURN_URL }}
+          STRIPE_CHECKOUT_SUCCESS_URL: ${{ vars.STRIPE_CHECKOUT_SUCCESS_URL }}
+          STRIPE_CHECKOUT_CANCEL_URL: ${{ vars.STRIPE_CHECKOUT_CANCEL_URL }}

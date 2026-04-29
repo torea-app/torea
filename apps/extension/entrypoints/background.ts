@@ -4,6 +4,7 @@ import {
   ERROR_MESSAGES,
   WEB_URL,
 } from "../lib/constants";
+import { computeEffectiveLimitMs, fetchPlanGuard } from "../lib/plan-guard";
 import { recordingStateStorage } from "../lib/storage";
 import type { ExtensionMessage } from "../types/message";
 import {
@@ -158,6 +159,14 @@ async function handleStartRecording(
   micEnabled: boolean,
   quality: VideoQuality,
 ): Promise<void> {
+  // --- 0. プラン情報を取得し、自動停止までの時間（effectiveLimitMs）を計算 ---
+  // 失敗時は undefined（自動停止しない）。サーバー側でも上限超過時は 402 で
+  // 弾かれるので、フェッチ失敗 = 録画させないにはしない。
+  const planGuard = await fetchPlanGuard();
+  const effectiveLimitMs = planGuard
+    ? computeEffectiveLimitMs(planGuard)
+    : undefined;
+
   // --- 1. アクティブタブの取得（UI 表示用 + tab モードでは録画対象） ---
   const [activeTab] = await browser.tabs.query({
     active: true,
@@ -177,6 +186,7 @@ async function handleStartRecording(
       activeTabTitle,
       micEnabled,
       quality,
+      effectiveLimitMs,
     });
   } else {
     await handleStartTabRecording({
@@ -184,6 +194,7 @@ async function handleStartRecording(
       tabTitle: activeTabTitle,
       micEnabled,
       quality,
+      effectiveLimitMs,
     });
   }
 }
@@ -197,11 +208,13 @@ async function handleStartTabRecording({
   tabTitle,
   micEnabled,
   quality,
+  effectiveLimitMs,
 }: {
   tabId: number;
   tabTitle: string | undefined;
   micEnabled: boolean;
   quality: VideoQuality;
+  effectiveLimitMs: number | undefined;
 }): Promise<void> {
   // --- 1. マイク権限を確認（サーバー呼び出し前に行うことで無駄な API 呼び出しを防ぐ） ---
   if (micEnabled) {
@@ -235,7 +248,11 @@ async function handleStartTabRecording({
   // --- 4. サーバーに録画レコードを作成 ---
   let recordingId: string;
   try {
-    const result = await recordingApi.create({ title: tabTitle, mimeType });
+    const result = await recordingApi.create({
+      title: tabTitle,
+      mimeType,
+      quality,
+    });
     recordingId = result.id;
   } catch (error) {
     await closeOffscreenDocument();
@@ -288,6 +305,7 @@ async function handleStartTabRecording({
     recordingId,
     micEnabled,
     quality,
+    effectiveLimitMs,
   });
 
   // --- 9. 録画開始状態を保存 ---
@@ -324,11 +342,13 @@ async function handleStartDisplayRecording({
   activeTabTitle,
   micEnabled,
   quality,
+  effectiveLimitMs,
 }: {
   uiTabId: number;
   activeTabTitle: string | undefined;
   micEnabled: boolean;
   quality: VideoQuality;
+  effectiveLimitMs: number | undefined;
 }): Promise<void> {
   // --- 1. Offscreen Document を作成（getDisplayMedia の呼び出し先） ---
   // popup → SW → offscreen のメッセージチェーンで user gesture が伝播するため、
@@ -414,7 +434,7 @@ async function handleStartDisplayRecording({
 
   let recordingId: string;
   try {
-    const result = await recordingApi.create({ title, mimeType });
+    const result = await recordingApi.create({ title, mimeType, quality });
     recordingId = result.id;
   } catch (error) {
     await discardDisplayCaptureStream();
@@ -468,6 +488,7 @@ async function handleStartDisplayRecording({
       recordingId,
       micEnabled,
       quality,
+      effectiveLimitMs,
     });
   } catch (error) {
     await discardDisplayCaptureStream();
@@ -524,6 +545,7 @@ async function sendStartRecordingToOffscreen(args: {
   recordingId: string;
   micEnabled: boolean;
   quality: VideoQuality;
+  effectiveLimitMs: number | undefined;
 }): Promise<void> {
   let offscreenResponse: { success: boolean; error?: string } | undefined;
   try {
@@ -534,6 +556,7 @@ async function sendStartRecordingToOffscreen(args: {
       recordingId: args.recordingId,
       micEnabled: args.micEnabled,
       quality: args.quality,
+      effectiveLimitMs: args.effectiveLimitMs,
     } satisfies ExtensionMessage);
   } catch (e) {
     console.error("[Torea] sendStartRecordingToOffscreen failed", e);
@@ -739,6 +762,58 @@ async function handleStopRecording(): Promise<void> {
 }
 
 // =============================================
+// プラン上限の通知（自動停止 / 残り時間警告）
+// =============================================
+
+/**
+ * `chrome.notifications` で表示する短いデスクトップ通知。
+ * "notifications" 権限は manifest に追加済み。
+ *
+ * iconUrl は MV3 では拡張機能内のリソースを `runtime.getURL` で参照する。
+ * Torea の web_accessible_resources には icon があるが、popup/notifications では
+ * 拡張機能のアイコン（manifest icons）が暗黙的に使われるため、未指定で問題ない。
+ * Chrome の型は iconUrl を要求するので Torea の icon-128 をフォールバックに用いる。
+ */
+function showLimitNotification(
+  id: string,
+  title: string,
+  message: string,
+): void {
+  // `chrome.notifications.create` は callback / Promise のどちらでも呼べるが
+  // Promise 形は MV3 で安定しているのでこれを使う。失敗（権限拒否等）は無視する。
+  try {
+    browser.notifications
+      .create(id, {
+        type: "basic",
+        title,
+        message,
+        iconUrl: browser.runtime.getURL("/icon/128.png"),
+        priority: 2,
+      })
+      .catch(() => {});
+  } catch {
+    // notifications API 未対応などは無視
+  }
+}
+
+function notifyLimitWarning(remainingMs: number): void {
+  const label = remainingMs >= 60_000 ? "あと 2 分" : "あと 30 秒";
+  showLimitNotification(
+    `torea-limit-warning-${remainingMs}`,
+    `Torea: 録画の自動停止まで${label}`,
+    "Pro にすると 1 本あたり 3 時間まで録画できます。",
+  );
+}
+
+function notifyLimitReached(): void {
+  showLimitNotification(
+    "torea-limit-reached",
+    "Torea: 上限に達したため録画を停止しました",
+    "Pro にすると月の総録画時間が無制限になり、1 本あたり 3 時間まで録画できます。",
+  );
+}
+
+// =============================================
 // 録画完了 / エラーハンドリング
 // =============================================
 
@@ -918,6 +993,14 @@ browser.runtime.onMessage.addListener(
             });
           }
         });
+        return false;
+
+      case "RECORDING_LIMIT_WARNING":
+        notifyLimitWarning(message.remainingMs);
+        return false;
+
+      case "RECORDING_LIMIT_REACHED":
+        notifyLimitReached();
         return false;
 
       case "KEEPALIVE":

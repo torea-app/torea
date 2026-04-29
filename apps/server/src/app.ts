@@ -41,11 +41,15 @@ const app = new Hono<AppEnv>()
         UNAUTHORIZED: 401,
         ALREADY_EXISTS: 409,
         VALIDATION_ERROR: 400,
+        // 402 Payment Required: プラン上限超過 / プラン要件未充足
+        // クライアント側で `if (status === 402) showUpgradeModal()` の分岐がしやすい
+        PLAN_QUOTA_EXCEEDED: 402,
+        PLAN_REQUIRED: 402,
       };
       const status = statusMap[err.code] ?? 400;
       return c.json(
         { error: err.message, code: err.code },
-        status as 400 | 401 | 403 | 404 | 409,
+        status as 400 | 401 | 402 | 403 | 404 | 409,
       );
     }
     console.error("Unhandled error:", err);

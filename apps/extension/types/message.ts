@@ -43,6 +43,11 @@ type OffscreenStartRecordingMessage = {
   recordingId: string;
   micEnabled: boolean;
   quality: VideoQuality;
+  /**
+   * 録画が自動停止される上限時間（ミリ秒）。プラン上限と月の残量の小さい方。
+   * 未指定（プラン情報が取得できなかった等）の場合は自動停止しない。
+   */
+  effectiveLimitMs?: number;
 };
 
 type OffscreenStopRecordingMessage = {
@@ -87,6 +92,26 @@ type VideoReadyMessage = {
  */
 type DisplayCaptureEndedMessage = {
   type: "DISPLAY_CAPTURE_ENDED";
+};
+
+/**
+ * 録画自動停止までの残り時間（2 分前 / 30 秒前）の事前通知。
+ * Offscreen のタイマで発火し、Background が chrome.notifications で
+ * デスクトップ通知を表示する。
+ */
+type RecordingLimitWarningMessage = {
+  type: "RECORDING_LIMIT_WARNING";
+  /** 残り時間（ミリ秒）。120000 / 30000 のいずれか。 */
+  remainingMs: number;
+};
+
+/**
+ * 録画上限（プラン上限 or 月の残量）に達して自動停止された通知。
+ * Background は通知 + アップグレード CTA への誘導を行う。
+ * MediaRecorder.stop() は本メッセージ送信後に呼ばれる（既存の VIDEO_READY 経路で完了処理が走る）。
+ */
+type RecordingLimitReachedMessage = {
+  type: "RECORDING_LIMIT_REACHED";
 };
 
 // =============================================
@@ -192,6 +217,8 @@ export type ExtensionMessage =
   | UploadProgressMessage
   | VideoReadyMessage
   | DisplayCaptureEndedMessage
+  | RecordingLimitWarningMessage
+  | RecordingLimitReachedMessage
   | KeepaliveMessage
   // Background → Content Script
   | InjectMicPermissionIframeMessage

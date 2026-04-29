@@ -6,21 +6,8 @@ import { AlertCircleIcon, FileTextIcon, LoaderCircleIcon } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { formatTimestamp } from "../../../_lib/format-time";
+import type { TranscriptionData } from "../../../_lib/types";
 import type { VideoPlayerHandle } from "./video-player";
-
-type TranscriptionData = {
-  id: string;
-  recordingId: string;
-  status: "pending" | "processing" | "completed" | "failed";
-  model: string;
-  language: string | null;
-  durationSeconds: number | null;
-  fullText: string | null;
-  segments: Array<{ start: number; end: number; text: string }> | null;
-  errorMessage: string | null;
-  createdAt: string;
-  completedAt: string | null;
-};
 
 type Props = {
   recordingId: string;

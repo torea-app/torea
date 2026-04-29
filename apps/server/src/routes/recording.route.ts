@@ -1,13 +1,20 @@
 import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
+import { PLAN_LIMITS } from "@torea/shared";
 import { Hono } from "hono";
+import { PlanRequiredError } from "../domain/errors/billing.error";
 import { createCommentRepository } from "../infrastructure/repositories/comment.repository";
 import { createRecordingRepository } from "../infrastructure/repositories/recording.repository";
+import { createSubscriptionRepository } from "../infrastructure/repositories/subscription.repository";
+import { createUsageQuotaRepository } from "../infrastructure/repositories/usage-quota.repository";
 import { createViewEventRepository } from "../infrastructure/repositories/view-event.repository";
 import { R2StorageClient } from "../infrastructure/storage/r2-client";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import type { AppEnv } from "../types";
+import { createCheckRecordingQuotaService } from "../use-cases/billing/check-recording-quota.service";
+import { createGetCurrentPlanService } from "../use-cases/billing/get-current-plan.service";
+import { createRecordRecordingUsageService } from "../use-cases/billing/record-recording-usage.service";
 import { createCommentService } from "../use-cases/comment/comment.service";
 import { createRecordingService } from "../use-cases/recording/recording.service";
 import { createViewAnalyticsService } from "../use-cases/view-analytics/view-analytics.service";
@@ -19,6 +26,20 @@ import {
   createRecordingSchema,
   listRecordingsSchema,
 } from "./recording.schemas";
+
+/**
+ * 録画ルート用の billing サービス群を 1 度の DB バインドで生成するヘルパ。
+ * route handler の冗長化を避ける。
+ */
+function buildBillingDeps(env: AppEnv["Bindings"]) {
+  const subRepo = createSubscriptionRepository(env.DB);
+  const quotaRepo = createUsageQuotaRepository(env.DB, createId);
+  return {
+    planService: createGetCurrentPlanService({ subscriptionRepo: subRepo }),
+    checkQuotaService: createCheckRecordingQuotaService({ quotaRepo }),
+    recordUsageService: createRecordRecordingUsageService({ quotaRepo }),
+  };
+}
 
 export const recordingRoute = new Hono<AppEnv>()
   // 全エンドポイントに認証を適用
@@ -35,6 +56,27 @@ export const recordingRoute = new Hono<AppEnv>()
       const body = c.req.valid("json");
       const user = c.get("user");
       const organizationId = c.get("activeOrganizationId");
+
+      const billing = buildBillingDeps(c.env);
+      const currentPlan = await billing.planService.execute(user.id);
+      // 月間総時間の上限到達時はここで QuotaExceededError → 402 になる。
+      // usage_quota の期間行は ensurePeriod で遅延作成される。
+      await billing.checkQuotaService.beforeStart({
+        userId: user.id,
+        currentPlan,
+      });
+      c.set("currentPlan", currentPlan);
+
+      // 解像度プランゲート: Free は `ultra` 不可。
+      // 拡張側は availableQualities でプリセット UI をフィルタするが、
+      // クライアントが偽装しても API レイヤで弾けるようサーバーで再判定する。
+      const allowedQualities = PLAN_LIMITS[currentPlan.plan].availableQualities;
+      if (!allowedQualities.includes(body.quality)) {
+        throw new PlanRequiredError(
+          "pro",
+          `${body.quality.toUpperCase()} 画質は Pro プランで利用可能です。`,
+        );
+      }
 
       const emitter = buildWebhookEmitter(c.env);
       const service = createRecordingService({
@@ -114,6 +156,18 @@ export const recordingRoute = new Hono<AppEnv>()
       const recordingId = c.req.param("id");
       const body = c.req.valid("json");
       const organizationId = c.get("activeOrganizationId");
+      const user = c.get("user");
+
+      const billing = buildBillingDeps(c.env);
+      const currentPlan = await billing.planService.execute(user.id);
+      // 拡張側のガードを迂回した不正な durationMs を弾く（1 本上限を再判定）。
+      // durationMs 未指定の場合は判定をスキップ（互換性）。
+      if (body.durationMs !== undefined) {
+        billing.checkQuotaService.afterComplete({
+          currentPlan,
+          durationMs: body.durationMs,
+        });
+      }
 
       const service = createRecordingService({
         repo: createRecordingRepository(c.env.DB),
@@ -130,6 +184,19 @@ export const recordingRoute = new Hono<AppEnv>()
         durationMs: body.durationMs,
         fileSize: body.fileSize,
       });
+
+      // 録画完了が成功した時のみ usage を加算する。加算失敗はログのみで握り潰し、
+      // 録画自体の完了レスポンスを優先する（次回 ensurePeriod で過小集計のみ）。
+      if (body.durationMs !== undefined) {
+        try {
+          await billing.recordUsageService.execute({
+            userId: user.id,
+            durationMs: body.durationMs,
+          });
+        } catch (err) {
+          console.error("[recording.complete] recordUsage failed", err);
+        }
+      }
 
       return c.json({ recording });
     },

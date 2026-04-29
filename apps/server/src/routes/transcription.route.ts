@@ -26,6 +26,17 @@ export const transcriptionRoute = new Hono<AppEnv>()
 
       const transcription = await service.getByRecordingId(id, organizationId);
 
+      // `transcription.segments` は DB に JSON 文字列として保存されており、
+      // クライアントには配列形に展開して返す。Hono RPC は JSON.parse の戻り値を
+      // any として推論するため、型注釈で形を確定させて web 側に正確な型を流す。
+      const segments: Array<{
+        start: number;
+        end: number;
+        text: string;
+      }> | null = transcription.segments
+        ? JSON.parse(transcription.segments)
+        : null;
+
       return c.json({
         id: transcription.id,
         recordingId: transcription.recordingId,
@@ -34,9 +45,7 @@ export const transcriptionRoute = new Hono<AppEnv>()
         language: transcription.language,
         durationSeconds: transcription.durationSeconds,
         fullText: transcription.fullText,
-        segments: transcription.segments
-          ? JSON.parse(transcription.segments)
-          : null,
+        segments,
         errorMessage: transcription.errorMessage,
         createdAt: transcription.createdAt,
         completedAt: transcription.completedAt,

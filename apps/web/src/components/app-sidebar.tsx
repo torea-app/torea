@@ -8,7 +8,9 @@ import {
   SidebarRail,
 } from "@torea/ui/components/ui/sidebar";
 import {
+  CreditCardIcon,
   LayoutDashboardIcon,
+  PlugIcon,
   Settings2Icon,
   UserCogIcon,
   UserPlusIcon,
@@ -47,6 +49,16 @@ const navSections: NavSection[] = [
         title: "組織設定",
         url: "/dashboard/settings",
         icon: <Settings2Icon />,
+      },
+      {
+        title: "連携",
+        url: "/dashboard/settings/integrations",
+        icon: <PlugIcon />,
+      },
+      {
+        title: "課金",
+        url: "/dashboard/settings/billing",
+        icon: <CreditCardIcon />,
       },
       {
         title: "Webhook",

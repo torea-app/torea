@@ -5,6 +5,7 @@ import {
   QUALITY_PRESETS,
   WEB_URL,
 } from "../../lib/constants";
+import { fetchPlanGuard, type PlanGuardData } from "../../lib/plan-guard";
 import {
   audioSettingsStorage,
   modeSettingsStorage,
@@ -175,6 +176,32 @@ function useModeSettings(): [ModeSettings, (settings: ModeSettings) => void] {
 }
 
 // =============================================
+// カスタムフック: プラン情報（録画ガード用）
+// =============================================
+
+/**
+ * `GET /api/billing/me` を 1 度叩いて、プラン上限と月の残量を取得する。
+ * 認証エラーや fetch 失敗時は `null` のまま（ガードは API 側でも再判定するため、
+ * popup 側の判定は UX のためのものに留まる）。
+ */
+function usePlanGuard(enabled: boolean): PlanGuardData | null {
+  const [data, setData] = useState<PlanGuardData | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    fetchPlanGuard().then((d) => {
+      if (!cancelled) setData(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  return data;
+}
+
+// =============================================
 // LoginView — 未認証
 // =============================================
 
@@ -209,6 +236,7 @@ function IdleView({
   modeSettings,
   onUpdateModeSettings,
   onStartRecording,
+  planGuard,
 }: {
   audioSettings: AudioSettings;
   onUpdateAudioSettings: (settings: AudioSettings) => void;
@@ -217,6 +245,7 @@ function IdleView({
   modeSettings: ModeSettings;
   onUpdateModeSettings: (settings: ModeSettings) => void;
   onStartRecording: () => void;
+  planGuard: PlanGuardData | null;
 }) {
   const [tabTitle, setTabTitle] = useState<string | null>(null);
   const [tabUrl, setTabUrl] = useState<string | null | undefined>(undefined);
@@ -232,8 +261,29 @@ function IdleView({
   const isTabRecordable = isRecordableUrl(tabUrl);
   // undefined = まだ取得中
   const isLoadingTab = tabUrl === undefined;
+
+  // プランガード: 月の総録画時間を使い切ったら録画開始を不可にする
+  const monthlyExhausted =
+    planGuard !== null && planGuard.monthlyRecordingDurationRemainingMs === 0;
+  const selectedQualityLocked =
+    planGuard !== null &&
+    !planGuard.availableQualities.includes(qualitySettings.quality);
+
+  // 選択中の画質が現プランで使えない（例: 解約後に保存値が ultra のまま）場合は
+  // 自動で利用可能な上位画質にフォールバックする（UX 改善 + 開始ボタン有効化）。
+  useEffect(() => {
+    if (!selectedQualityLocked || planGuard === null) return;
+    const fallback =
+      QUALITY_PRESET_ORDER.find((q) =>
+        planGuard.availableQualities.includes(q),
+      ) ?? "medium";
+    onUpdateQualitySettings({ quality: fallback });
+  }, [selectedQualityLocked, planGuard, onUpdateQualitySettings]);
+
   // tab モードは「録画可能 URL」が必要、display モードは常に開始可能
-  const canStart = isTabMode ? !isLoadingTab && isTabRecordable : true;
+  const canStart = isTabMode
+    ? !isLoadingTab && isTabRecordable && !monthlyExhausted
+    : !monthlyExhausted;
 
   return (
     <div className="space-y-4">
@@ -315,6 +365,30 @@ function IdleView({
         </div>
       )}
 
+      {/* 月の総録画時間 上限到達 */}
+      {monthlyExhausted && (
+        <div className="flex flex-col gap-1.5 rounded-md bg-amber-50 px-2.5 py-2 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          <div className="flex items-start gap-1.5">
+            <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
+            <p className="text-xs">
+              今月の録画時間の上限に達しました。Pro にすると無制限になります。
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="xs"
+            className="ml-auto"
+            onClick={() =>
+              browser.tabs.create({
+                url: `${WEB_URL}/pricing?source=quota_exceeded`,
+              })
+            }
+          >
+            Pro へアップグレード
+          </Button>
+        </div>
+      )}
+
       {/* 品質設定 */}
       <div className="space-y-2">
         <Label className="font-medium text-muted-foreground text-xs">
@@ -330,6 +404,42 @@ function IdleView({
           {QUALITY_PRESET_ORDER.map((quality) => {
             const preset = QUALITY_PRESETS[quality];
             const isSelected = qualitySettings.quality === quality;
+            const isLocked =
+              planGuard !== null &&
+              !planGuard.availableQualities.includes(quality);
+
+            // ロックされたプリセットは radio ではなく <button> に差し替えて、
+            // クリック / Enter / Space で /pricing を開けるようにする
+            // （disabled な radio はキーボードフォーカスできないため、
+            //  label の onClick で代用すると a11y 的に NG になる）。
+            if (isLocked) {
+              return (
+                <button
+                  key={quality}
+                  type="button"
+                  className="flex items-center gap-3 rounded-md border px-3 py-2 text-left opacity-60 transition-opacity hover:opacity-80"
+                  onClick={() =>
+                    browser.tabs.create({
+                      url: `${WEB_URL}/pricing?source=quality_locked_ultra`,
+                    })
+                  }
+                >
+                  <RadioGroupItem value={quality} disabled />
+                  <div className="flex flex-1 items-baseline justify-between gap-2">
+                    <span className="flex items-center gap-1.5 font-medium text-sm">
+                      {preset.label}
+                      <span className="rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                        Pro
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {preset.description}
+                    </span>
+                  </div>
+                </button>
+              );
+            }
+
             return (
               <div key={quality}>
                 <label
@@ -348,7 +458,7 @@ function IdleView({
                     </span>
                   </div>
                 </label>
-                {/* Ultra 選択時の注意メッセージ */}
+                {/* Ultra 選択時の注意メッセージ（Pro ユーザーのみ） */}
                 {quality === "ultra" && isSelected && (
                   <div className="mt-1 flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
                     <AlertTriangleIcon className="mt-0.5 size-3 shrink-0" />
@@ -526,6 +636,7 @@ export default function App() {
   const [qualitySettings, updateQualitySettings] = useQualitySettings();
   const [modeSettings, updateModeSettings] = useModeSettings();
   const [isStarting, setIsStarting] = useState(false);
+  const planGuard = usePlanGuard(!!session);
 
   // --- 録画開始 ---
   const handleStartRecording = useCallback(async () => {
@@ -671,6 +782,7 @@ export default function App() {
           modeSettings={modeSettings}
           onUpdateModeSettings={updateModeSettings}
           onStartRecording={handleStartRecording}
+          planGuard={planGuard}
         />
       )}
     </div>

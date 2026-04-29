@@ -1,4 +1,4 @@
-import { formatDuration } from "@/app/dashboard/(protected)/recordings/_lib/format";
+import { formatDuration } from "@/lib/format";
 import type { ShareMetadata } from "../_lib/types";
 
 type Props = {

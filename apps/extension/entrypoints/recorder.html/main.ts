@@ -24,6 +24,54 @@ let captureStream: MediaStream | null = null;
 let preparedDisplayStream: MediaStream | null = null;
 let recordingStartTime: number | null = null;
 
+/**
+ * 録画上限到達（プラン上限 or 月の残量の小さい方）で自動停止するためのタイマ。
+ * 警告 2 件（残り 2 分 / 30 秒）と上限到達の 3 つを保持する。
+ */
+const autoStopTimers: Array<ReturnType<typeof setTimeout>> = [];
+
+function clearAutoStopTimers(): void {
+  for (const id of autoStopTimers) clearTimeout(id);
+  autoStopTimers.length = 0;
+}
+
+/**
+ * `effectiveLimitMs` 後に MediaRecorder を自動停止し、その前に 2 分前 / 30 秒前を
+ * Background へ通知する。`effectiveLimitMs` が極端に短い場合は、対応する警告は
+ * 発火させない（負の遅延でタイマを張らない）。
+ */
+function scheduleAutoStop(effectiveLimitMs: number): void {
+  clearAutoStopTimers();
+  const warnings: ReadonlyArray<number> = [2 * 60_000, 30_000];
+  for (const remainingMs of warnings) {
+    const fireAt = effectiveLimitMs - remainingMs;
+    if (fireAt > 0) {
+      autoStopTimers.push(
+        setTimeout(() => {
+          browser.runtime
+            .sendMessage({
+              type: "RECORDING_LIMIT_WARNING",
+              remainingMs,
+            } satisfies ExtensionMessage)
+            .catch(() => {});
+        }, fireAt),
+      );
+    }
+  }
+  autoStopTimers.push(
+    setTimeout(() => {
+      // 通知 → 停止の順。Background が通知を出す前に停止フローが走ると
+      // ユーザーに「自動停止された」という UX が伝わりにくいため。
+      browser.runtime
+        .sendMessage({
+          type: "RECORDING_LIMIT_REACHED",
+        } satisfies ExtensionMessage)
+        .catch(() => {});
+      stopRecording();
+    }, effectiveLimitMs),
+  );
+}
+
 // =============================================
 // MV3 Service Worker キープアライブ
 // =============================================
@@ -199,6 +247,7 @@ async function startRecording(
   recordingId: string,
   micEnabled: boolean,
   quality: VideoQuality,
+  effectiveLimitMs: number | undefined,
 ): Promise<void> {
   // 1. MIME タイプ検出
   const { mimeType } = detectMimeType();
@@ -318,7 +367,13 @@ async function startRecording(
   // 9. Service Worker キープアライブ開始
   startKeepalive();
 
-  // 10. Background に録画開始を通知
+  // 10. 自動停止タイマ（プラン上限 or 月の残量の小さい方）。
+  //    Background が effectiveLimitMs を計算し、未指定の場合は自動停止しない。
+  if (effectiveLimitMs !== undefined && effectiveLimitMs > 0) {
+    scheduleAutoStop(effectiveLimitMs);
+  }
+
+  // 11. Background に録画開始を通知
   browser.runtime.sendMessage({
     type: "RECORDING_STARTED",
   } satisfies ExtensionMessage);
@@ -370,6 +425,9 @@ async function finalizeRecording(): Promise<void> {
 function cleanupResources(): void {
   // キープアライブを停止（録画が終わったら SW を維持する必要はない）
   stopKeepalive();
+
+  // 自動停止タイマも解除（手動停止時の二重発火を避ける）
+  clearAutoStopTimers();
 
   for (const track of captureStream?.getTracks() ?? []) {
     track.stop();
@@ -429,6 +487,7 @@ browser.runtime.onMessage.addListener(
           message.recordingId,
           message.micEnabled,
           message.quality,
+          message.effectiveLimitMs,
         )
           .then(() => sendResponse({ success: true }))
           .catch((error: unknown) => {

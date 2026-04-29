@@ -1,12 +1,21 @@
 import { createId } from "@paralleldrive/cuid2";
 import { AwsClient } from "aws4fetch";
 import app from "./app";
+import { createTokenProvider } from "./infrastructure/google-drive/authed-drive-client";
+import { createDriveClient } from "./infrastructure/google-drive/drive-client";
+import { mapDriveError } from "./infrastructure/google-drive/error-mapping";
+import { createGoogleOAuthClient } from "./infrastructure/google-drive/oauth-client";
+import { createDriveExportRepository } from "./infrastructure/repositories/drive-export.repository";
+import { createGoogleDriveAccountRepository } from "./infrastructure/repositories/google-drive-account.repository";
 import { createRecordingRepository } from "./infrastructure/repositories/recording.repository";
 import { createTranscriptionRepository } from "./infrastructure/repositories/transcription.repository";
+import { createUserIntegrationPreferenceRepository } from "./infrastructure/repositories/user-integration-preference.repository";
 import { createWebhookRepository } from "./infrastructure/repositories/webhook.repository";
 import { dispatchWebhook } from "./infrastructure/webhook/dispatcher";
 import { createWebhookSecretStore } from "./infrastructure/webhook/secret-store";
 import type { AppEnv } from "./types";
+import { createDriveExportService } from "./use-cases/google-drive/drive-export.service";
+import { createDriveExportRunner } from "./use-cases/google-drive/drive-export-runner.service";
 import { createWebhookDeliveryRunner } from "./use-cases/webhook/webhook-delivery-runner.service";
 import { createWebhookRetryScheduler } from "./use-cases/webhook/webhook-retry-scheduler.service";
 import { buildWebhookEmitter } from "./webhook-emitter";
@@ -29,10 +38,17 @@ type WebhookDeliveryMessage = {
   organizationId: string;
 };
 
+type DriveExportMessage = {
+  exportId: string;
+  recordingId: string;
+  organizationId: string;
+};
+
 type QueueMessage =
   | VideoProcessingMessage
   | TranscriptionMessage
-  | WebhookDeliveryMessage;
+  | WebhookDeliveryMessage
+  | DriveExportMessage;
 
 async function handleVideoProcessingMessage(
   body: VideoProcessingMessage,
@@ -173,6 +189,32 @@ async function handleVideoProcessingMessage(
       // 文字起こしエンキュー失敗は動画変換の成否に影響しない
     }
   }
+
+  // 動画変換成功後に Drive 自動保存をトリガする (video のみ)。
+  // transcript は transcription.completed 側で別途トリガする。
+  if (lambdaSucceeded && env.SKIP_DRIVE_EXPORT !== "true") {
+    try {
+      const service = createDriveExportService({
+        driveAccountRepo: createGoogleDriveAccountRepository(env.DB),
+        exportRepo: createDriveExportRepository(env.DB),
+        recordingRepo: createRecordingRepository(env.DB),
+        transcriptionRepo: createTranscriptionRepository(env.DB),
+        preferenceRepo: createUserIntegrationPreferenceRepository(env.DB),
+        queue: env.DRIVE_EXPORT_QUEUE,
+        generateId: createId,
+      });
+      await service.requestAutoExport({
+        recordingId,
+        organizationId,
+        kinds: ["video"],
+      });
+    } catch (err) {
+      console.error(
+        `auto drive-export (video) skipped for ${recordingId}:`,
+        err,
+      );
+    }
+  }
 }
 
 async function handleTranscriptionMessage(
@@ -250,6 +292,32 @@ async function handleTranscriptionMessage(
         emitErr,
       );
     }
+
+    // transcription 完了後に Drive 自動保存をトリガする (transcript のみ)。
+    // video は recording.completed 側で既にトリガ済み。
+    if (env.SKIP_DRIVE_EXPORT !== "true") {
+      try {
+        const service = createDriveExportService({
+          driveAccountRepo: createGoogleDriveAccountRepository(env.DB),
+          exportRepo: createDriveExportRepository(env.DB),
+          recordingRepo: createRecordingRepository(env.DB),
+          transcriptionRepo: createTranscriptionRepository(env.DB),
+          preferenceRepo: createUserIntegrationPreferenceRepository(env.DB),
+          queue: env.DRIVE_EXPORT_QUEUE,
+          generateId: createId,
+        });
+        await service.requestAutoExport({
+          recordingId,
+          organizationId,
+          kinds: ["transcript"],
+        });
+      } catch (err) {
+        console.error(
+          `auto drive-export (transcript) skipped for ${recordingId}:`,
+          err,
+        );
+      }
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`Transcription failed for ${recordingId}:`, message);
@@ -295,6 +363,53 @@ async function handleWebhookDeliveryMessage(
   await runner.run(body.deliveryId, body.organizationId);
 }
 
+async function handleDriveExportMessage(
+  body: DriveExportMessage,
+  env: AppEnv["Bindings"],
+  msg: Message<DriveExportMessage>,
+): Promise<void> {
+  const driveAccountRepo = createGoogleDriveAccountRepository(env.DB);
+  const oauth = createGoogleOAuthClient({
+    clientId: env.GOOGLE_OAUTH_CLIENT_ID,
+    clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+    redirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,
+  });
+  const buildDriveClient = (userId: string) => {
+    const getAccessToken = createTokenProvider(
+      {
+        repo: driveAccountRepo,
+        oauth,
+        encryptionKeyB64: env.INTEGRATION_ENCRYPTION_KEY,
+      },
+      userId,
+    );
+    return createDriveClient(getAccessToken);
+  };
+
+  const emitter = buildWebhookEmitter(env);
+  const runner = createDriveExportRunner({
+    exportRepo: createDriveExportRepository(env.DB),
+    driveAccountRepo,
+    recordingRepo: createRecordingRepository(env.DB),
+    transcriptionRepo: createTranscriptionRepository(env.DB),
+    r2: {
+      get: async (key) => {
+        const obj = await env.R2.get(key);
+        return obj ? { body: obj.body, size: obj.size } : null;
+      },
+    },
+    buildDriveClient,
+    mapError: mapDriveError,
+    generateId: createId,
+    onEvent: emitter.emit,
+  });
+
+  const result = await runner.run({ exportId: body.exportId });
+  if (result.retryable) {
+    msg.retry();
+  }
+}
+
 export default {
   fetch: app.fetch,
 
@@ -337,6 +452,12 @@ export default {
           await handleWebhookDeliveryMessage(
             msg.body as WebhookDeliveryMessage,
             env,
+          );
+        } else if (batch.queue === env.DRIVE_EXPORT_QUEUE_NAME) {
+          await handleDriveExportMessage(
+            msg.body as DriveExportMessage,
+            env,
+            msg as Message<DriveExportMessage>,
           );
         } else {
           // 未知のキュー: ack せず retry させ、可視化する。

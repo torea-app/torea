@@ -14,7 +14,7 @@ export function SignInForm() {
 
   return (
     <div className="mx-auto w-full max-w-md p-6">
-      <h1 className="mb-6 text-center font-bold text-3xl">おかえりなさい</h1>
+      <h1 className="mb-6 text-center font-bold text-3xl">ログイン</h1>
 
       <form
         onSubmit={(e) => {

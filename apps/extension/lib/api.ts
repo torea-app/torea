@@ -1,4 +1,4 @@
-import type { UploadedPart } from "../types/recording";
+import type { UploadedPart, VideoQuality } from "../types/recording";
 
 /** API サーバーのベース URL
  * 開発時は .env の VITE_API_URL を使用し、未設定の場合は本番 URL にフォールバックする。
@@ -42,7 +42,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 /** 録画 API クライアント */
 export const recordingApi = {
   /** POST /api/recordings — 録画開始 */
-  create(data: { title?: string; mimeType?: string }) {
+  create(data: { title?: string; mimeType?: string; quality?: VideoQuality }) {
     return apiFetch<{ id: string; uploadId: string; r2Key: string }>(
       "/api/recordings",
       {

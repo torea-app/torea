@@ -1,5 +1,7 @@
+import { stripe } from "@better-auth/stripe";
 import { db } from "@torea/db";
-import * as schema from "@torea/db/schema/auth";
+import * as authSchema from "@torea/db/schema/auth";
+import * as subscriptionSchema from "@torea/db/schema/subscription";
 import { env } from "@torea/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -11,6 +13,12 @@ import {
   verificationEmailHtml,
 } from "./email-templates";
 import { ac, admin, member, owner } from "./permissions";
+import { createStripeClient } from "./stripe-client";
+import { buildStripePlans } from "./stripe-plans";
+
+// @better-auth/stripe plugin が `subscription` モデルを要求するため、
+// auth schema と一緒に明示的にマージして drizzleAdapter に渡す。
+const schema = { ...authSchema, ...subscriptionSchema };
 
 /**
  * PBKDF2 password hashing using Web Crypto API.
@@ -164,7 +172,12 @@ export const auth = betterAuth({
       async sendInvitationEmail(data) {
         try {
           const resend = new Resend(env.RESEND_API_KEY);
-          const inviteLink = `${env.BETTER_AUTH_URL}/invitation/${data.id}`;
+          // 招待リンクはフロントエンド (Next.js) のページなので、CORS_ORIGIN の
+          // 1 番目をフロント origin として使う。BETTER_AUTH_URL は Better Auth
+          // ハンドラの URL (Hono server) なのでここでは使わない。
+          const frontendOrigin =
+            env.CORS_ORIGIN.split(",")[0]?.trim() ?? env.BETTER_AUTH_URL;
+          const inviteLink = `${frontendOrigin}/invitation/${data.id}`;
           const { error } = await resend.emails.send({
             from: env.FROM_EMAIL,
             to: [data.email],
@@ -180,6 +193,33 @@ export const auth = betterAuth({
         } catch (e) {
           console.error("[sendInvitationEmail] Failed to send email:", e);
         }
+      },
+    }),
+    stripe({
+      stripeClient: createStripeClient(env.STRIPE_SECRET_KEY),
+      stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
+      createCustomerOnSignUp: true,
+      // ユーザー単位の課金。組織単位は将来 Team プランで再検討。
+      subscription: {
+        enabled: true,
+        plans: buildStripePlans({
+          STRIPE_PRICE_ID_PRO_MONTH: env.STRIPE_PRICE_ID_PRO_MONTH,
+          STRIPE_PRICE_ID_PRO_YEAR: env.STRIPE_PRICE_ID_PRO_YEAR,
+        }),
+        // SaaS の通例として、メール未検証ユーザーが課金開始するのは防ぐ。
+        requireEmailVerification: true,
+        // 【セキュリティ必須】 subscription.upgrade/cancel/restore/list は
+        // クライアントが任意の referenceId を渡せるため、必ず session.user.id と
+        // 一致することを検証する。不一致なら false を返して 403 にする。
+        // https://better-auth.com/docs/plugins/stripe#authorizing-reference
+        authorizeReference: async ({ user, referenceId }) => {
+          return referenceId === user.id;
+        },
+      },
+      // 公式 plugin が処理しないイベントを拾う。Phase 3 で usage_quota の月次
+      // リセット記録 / 監査ログを実装する。Phase 2 では console.log のみ。
+      onEvent: async (event) => {
+        console.log("[stripe-webhook] received event:", event.type);
       },
     }),
   ],

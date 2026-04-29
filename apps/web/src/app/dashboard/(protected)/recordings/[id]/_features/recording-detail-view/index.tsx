@@ -17,11 +17,12 @@ import { Separator } from "@torea/ui/components/ui/separator";
 import { DownloadIcon, EyeIcon, Trash2Icon, UsersIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { formatDateTime } from "@/lib/format";
-import { formatDuration, formatFileSize } from "../../../_lib/format";
+import { formatDateTime, formatDuration, formatFileSize } from "@/lib/format";
 import type { CommentThread, Recording, ViewStats } from "../../../_lib/types";
 import { deleteRecordingAndRedirect } from "../../_lib/actions";
+import type { DriveExport } from "../../_lib/types";
 import { CommentSection } from "./_components/comment-section";
+import { DriveExportPanel } from "./_components/drive-export-panel";
 import { ShareDialog } from "./_components/share-dialog";
 import { ThumbnailGenerator } from "./_components/thumbnail-generator";
 import { TranscriptionPanel } from "./_components/transcription-panel";
@@ -34,12 +35,16 @@ type Props = {
   recording: Recording;
   stats?: ViewStats;
   initialComments: CommentThread[];
+  driveExports: DriveExport[];
+  driveConnected: boolean;
 };
 
 export function RecordingDetailView({
   recording,
   stats,
   initialComments,
+  driveExports,
+  driveConnected,
 }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [comments, setComments] = useState<CommentThread[]>(initialComments);
@@ -179,6 +184,16 @@ export function RecordingDetailView({
           comments={comments}
           setComments={setComments}
           playerRef={playerRef}
+        />
+      )}
+
+      {/* Drive エクスポートパネル（completed の場合） */}
+      {recording.status === "completed" && (
+        <DriveExportPanel
+          recordingId={recording.id}
+          initialExports={driveExports}
+          driveConnected={driveConnected}
+          recordingStatus={recording.status}
         />
       )}
 

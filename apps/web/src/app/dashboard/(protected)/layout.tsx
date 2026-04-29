@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AuthProvider } from "@/components/auth-provider";
+import { UpgradeCtaDialog } from "@/components/upgrade-cta-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ export default async function ProtectedLayout({
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>{children}</SidebarInset>
+        {/* dashboard 配下のどこから openUpgradeCtaDialog() を呼んでも 1 つだけ表示される */}
+        <UpgradeCtaDialog />
       </SidebarProvider>
     </AuthProvider>
   );

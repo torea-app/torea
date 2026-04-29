@@ -11,6 +11,8 @@ const WEBHOOK_EVENT_NAMES = [
   "recording.completed",
   "recording.failed",
   "recording.deleted",
+  "recording.drive_exported",
+  "recording.drive_export_failed",
   "transcription.started",
   "transcription.completed",
   "transcription.failed",

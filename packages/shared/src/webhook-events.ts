@@ -29,6 +29,16 @@ export const WEBHOOK_EVENT_CATALOG = [
     category: "recording",
   },
   {
+    name: "recording.drive_exported",
+    label: "Drive 保存完了",
+    category: "recording",
+  },
+  {
+    name: "recording.drive_export_failed",
+    label: "Drive 保存失敗",
+    category: "recording",
+  },
+  {
     name: "transcription.started",
     label: "文字起こし開始",
     category: "transcription",

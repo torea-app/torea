@@ -8,6 +8,9 @@
     "./date": {
       "default": "./src/date.ts"
     },
+    "./pricing-config": {
+      "default": "./src/pricing-config.ts"
+    },
     "./schemas": {
       "default": "./src/schemas/index.ts"
     },

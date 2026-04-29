@@ -24,9 +24,8 @@ import { MoreHorizontalIcon, PlayIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatDuration, formatFileSize } from "@/lib/format";
 import { deleteRecording } from "../../../_lib/actions";
-import { formatDuration, formatFileSize } from "../../../_lib/format";
 import type { Recording } from "../../../_lib/types";
 
 const statusConfig = {

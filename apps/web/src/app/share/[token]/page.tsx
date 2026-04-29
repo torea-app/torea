@@ -1,22 +1,7 @@
 import { env } from "@torea/env/web";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { OrgMembersView } from "./_components/org-members-view";
-import { PasswordProtectedView } from "./_components/password-protected-view";
-import type { ShareMetadata } from "./_lib/types";
-
-async function getShareMetadata(token: string): Promise<ShareMetadata | null> {
-  try {
-    const res = await fetch(
-      `${env.NEXT_PUBLIC_SERVER_URL}/api/share/${encodeURIComponent(token)}`,
-      { cache: "no-store" },
-    );
-    if (!res.ok) return null;
-    return res.json() as Promise<ShareMetadata>;
-  } catch {
-    return null;
-  }
-}
+import { ShareContainer } from "./_containers/share-container";
+import { getShareMetadata } from "./_lib/queries";
 
 export async function generateMetadata({
   params,
@@ -24,12 +9,13 @@ export async function generateMetadata({
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await params;
-  const metadata = await getShareMetadata(token);
+  const result = await getShareMetadata(token);
 
-  if (!metadata) {
+  if (!result.success) {
     return { title: "動画が見つかりません" };
   }
 
+  const metadata = result.data;
   const thumbnailUrl = `${env.NEXT_PUBLIC_SERVER_URL}/api/share/${encodeURIComponent(token)}/thumbnail`;
 
   return {
@@ -61,28 +47,19 @@ export default async function SharePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const metadata = await getShareMetadata(token);
-
-  if (!metadata) {
-    notFound();
-  }
-
   const sharePageUrl = `${env.NEXT_PUBLIC_APP_URL}/share/${encodeURIComponent(token)}`;
   const oembedEndpoint = `${env.NEXT_PUBLIC_SERVER_URL}/api/oembed?url=${encodeURIComponent(sharePageUrl)}&format=json`;
 
+  // generateMetadata で取得したメタデータと title が同期するよう、
+  // oembed の title パラメータは含めず href のみ宣言する。
   return (
     <>
       <link
         rel="alternate"
         type="application/json+oembed"
         href={oembedEndpoint}
-        title={metadata.recordingTitle}
       />
-      {metadata.type === "org_members" ? (
-        <OrgMembersView token={token} metadata={metadata} />
-      ) : (
-        <PasswordProtectedView token={token} metadata={metadata} />
-      )}
+      <ShareContainer token={token} />
     </>
   );
 }
